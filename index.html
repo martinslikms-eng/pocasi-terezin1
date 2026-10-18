@@ -233,6 +233,7 @@ footer a{color:var(--rain)}
   <section class="sky" id="pastSec">
     <div class="head"><h2>Srážky za posledních 7 dní</h2><span class="ptot" id="pastTot">–</span></div>
     <div class="chartbox pastbox"><svg id="pastChart" viewBox="0 0 420 230" role="img" aria-label="Srážky v Terezíně za posledních 7 dní"></svg></div>
+    <p class="pnote"><b id="pastUpd">Aktualizuje se automaticky.</b></p>
     <p class="pnote" id="pastNote">1 mm srážek = 1 litr vody na každý m². Hodnoty jsou z meteorologického modelu pro polohu obce, ne ze srážkoměru.</p>
   </section>
 
@@ -497,6 +498,8 @@ function render(pts,cur,updated,live){
       g+=`<text x="${cx}" y="${H-5}" text-anchor="middle" style="fill:#333;font-size:11px">${new Intl.DateTimeFormat("cs-CZ",{timeZone:"UTC",day:"numeric",month:"numeric"}).format(d)}</text>`;
     });
     svg.innerHTML=g;
+    const od=new Date(Date.parse(keys[0]+"T12:00:00Z")), dod=new Date(Date.parse(keys[6]+"T12:00:00Z")), fd=new Intl.DateTimeFormat("cs-CZ",{timeZone:"UTC",day:"numeric",month:"numeric"});
+    document.getElementById("pastUpd").textContent=`Období ${fd.format(od)} – ${fd.format(dod)} · aktualizováno ${fHour.format(new Date())}, automaticky každých 15 minut a o půlnoci se posune o den.`;
   })();
   // graf 72 h od aktuální hodiny
   const H=pts.filter(p=>p.per===1 && p.d>now-3600e3).slice(0,72);
@@ -850,8 +853,14 @@ async function loadWeather(){
     render(pts,cur,new Date(UPDATED),false);
   }
 }
-loadWeather();
-setInterval(loadWeather,15*60e3);
+let lastLoad=0, lastDay=fKey.format(new Date());
+const reload=()=>{lastLoad=Date.now();lastDay=fKey.format(new Date());return loadWeather();};
+reload();
+setInterval(reload,15*60e3);
+// po půlnoci hned posunout 7denní okno; po návratu do aplikace načíst čerstvá data
+setInterval(()=>{if(fKey.format(new Date())!==lastDay)reload();},60e3);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&Date.now()-lastLoad>5*60e3)reload();});
+addEventListener("pageshow",e=>{if(e.persisted)reload();});
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>

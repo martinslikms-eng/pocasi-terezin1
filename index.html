@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body>
+<title>Počasí Terezín 696 14</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column "meteorologický list" – velké číslo teploty, graf 72 h, tabulka dnů */
+:root{
+  --bg:#eef2f4; --surface:#ffffff; --fg:#1b2730; --muted:#5d6e7a; --line:#d5dee3;
+  --temp:#d0582a; --rain:#2f6fb0; --rain-soft:#bcd4ec; --grid:#e3e9ec;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11181d; --surface:#18222a; --fg:#e4ebef; --muted:#93a4af; --line:#2a3842;
+  --temp:#f08a5d; --rain:#6fa8e6; --rain-soft:#24425f; --grid:#222e36; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11181d; --surface:#18222a; --fg:#e4ebef; --muted:#93a4af; --line:#2a3842;
+  --temp:#f08a5d; --rain:#6fa8e6; --rain-soft:#24425f; --grid:#222e36; color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding-block:28px 48px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:grid;gap:28px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,6vw,40px);line-height:1.1;margin:4px 0 0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:500;font-size:20px;margin:0}
+.now{display:flex;flex-wrap:wrap;gap:24px 40px;align-items:flex-end}
+.big{font-family:var(--f-display);font-weight:700;font-size:clamp(64px,16vw,104px);line-height:.9;color:var(--temp);font-variant-numeric:tabular-nums}
+.big sup{font-size:.4em;vertical-align:.9em;margin-left:2px}
+.nowmeta{display:grid;gap:4px;padding-bottom:8px}
+.nowmeta .cond{font-size:18px;font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stat{background:var(--surface);padding:14px 16px;display:grid;gap:2px;min-width:0}
+.stat b{font-family:var(--f-mono);font-weight:500;font-size:22px;font-variant-numeric:tabular-nums}
+.stat .t{color:var(--temp)} .stat .r{color:var(--rain)}
+.stat span{font-size:13px;color:var(--muted)}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.stats{grid-template-columns:1fr}}
+.stat .sun{color:var(--fg)}
+td.sun{font-family:var(--f-mono);color:var(--muted)}
+section{display:grid;gap:12px}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.chartbox{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 4px 4px;overflow-x:auto}
+.chartbox svg{display:block;min-width:620px;width:100%;height:auto}
+.chartbox text{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+th{font-family:var(--f-mono);font-weight:400;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+td.num,th.num{text-align:right;font-family:var(--f-mono)}
+td .ic{display:inline-flex;vertical-align:middle;margin-right:8px}
+.mx{color:var(--temp)} .mn{color:var(--muted)}
+.bar{display:inline-block;height:8px;border-radius:2px;background:var(--rain);vertical-align:middle;margin-left:8px}
+.dry{color:var(--muted)}
+tr.today td{background:color-mix(in srgb, var(--rain-soft) 35%, transparent)}
+.radar{display:grid;gap:12px}
+.rlink{display:grid;gap:4px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px;color:var(--fg);text-decoration:none;min-width:0;transition:border-color .15s}
+.rlink b{font-family:var(--f-display);font-weight:500;font-size:17px;color:var(--rain)}
+.rlink b::after{content:" ↗";font-family:var(--f-mono);font-size:13px}
+.rlink span{font-size:13px;color:var(--muted)}
+.rlink:hover,.rlink:focus-visible{border-color:var(--rain);outline:none}
+.note{margin:0;font-size:13px;color:var(--muted);max-width:65ch}
+.radarframe{position:relative;width:100%;aspect-ratio:16/10;max-width:100%;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+@media (max-width:520px){.radarframe{aspect-ratio:4/5}}
+#rmap{position:absolute;inset:0}
+.rctl{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.rctl button{font:500 14px var(--f-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
+.rctl button:hover,.rctl button:focus-visible{border-color:var(--rain);outline:none}
+.rctl input{flex:1 1 160px;accent-color:var(--rain)}
+.rscale{height:28px;max-width:100%;border-radius:4px}
+.leaflet-container{background:var(--surface)!important;font-family:var(--f-body)}
+.radar-img{image-rendering:pixelated}
+.note a{color:var(--rain)}
+footer{font-size:13px;color:var(--muted);display:grid;gap:4px;max-width:65ch}
+footer a{color:var(--rain)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Jihomoravský kraj · okres Hodonín · PSČ 696 14</div>
+    <h1>Terezín – teplota a srážky</h1>
+  </header>
+
+  <div class="now">
+    <div class="big" id="nowT">–<sup>°C</sup></div>
+    <div class="nowmeta">
+      <div class="cond" id="nowC">–</div>
+      <div class="eyebrow" id="nowTime">–</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span>Dnes max / min</span><b class="t" id="sToday">–</b></div>
+    <div class="stat"><span>Srážky příštích 24 h</span><b class="r" id="s24">–</b></div>
+    <div class="stat"><span id="sAllLab">Srážky celkem</span><b class="r" id="sAll">–</b></div>
+    <div class="stat"><span>Dnes východ / západ slunce</span><b class="sun" id="sSun">–</b><span id="sLen"></span></div>
+  </div>
+
+  <section>
+    <div class="head">
+      <h2>Příštích 72 hodin</h2>
+      <div class="legend"><span><i style="background:var(--temp)"></i>Teplota °C</span><span><i style="background:var(--rain)"></i>Srážky mm/h</span></div>
+    </div>
+    <div class="chartbox"><svg id="chart" viewBox="0 0 820 260" role="img" aria-label="Graf teploty a srážek na 72 hodin"></svg></div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Meteoradar ČHMÚ</h2><span class="eyebrow" id="rTime">načítám…</span></div>
+    <div class="radarframe"><div id="rmap"></div></div>
+    <div class="rctl">
+      <button id="rPlay" type="button" aria-label="Přehrát animaci">▶ Přehrát</button>
+      <input id="rSlide" type="range" min="0" max="11" value="11" aria-label="Čas snímku">
+      <img src="https://opendata.chmi.cz/meteorology/weather/radar/scl/scl-dbzmmh.png" alt="Barevná stupnice intenzity srážek" class="rscale">
+    </div>
+    <p class="note">Maximální odrazivost z radarové sítě ČHMÚ, zobrazena jen tam, kde srážky dopadají na zem. Nový snímek každých 5 minut, animace ukazuje poslední hodinu. Křížek označuje Terezín. Data: <a href="https://opendata.chmi.cz/meteorology/weather/radar/" target="_blank" rel="noopener">opendata.chmi.cz</a>, podkladová mapa © OpenStreetMap, © CARTO.</p>
+  </section>
+
+  <section>
+    <h2>Předpověď po dnech</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Den</th><th>Počasí</th><th class="num">Max</th><th class="num">Min</th><th class="num">Srážky</th><th class="num">Východ</th><th class="num">Západ</th><th class="num">Délka dne</th></tr></thead>
+      <tbody id="days"></tbody>
+    </table></div>
+  </section>
+
+  <footer>
+    <div id="upd">–</div>
+    <div>Zdroj předpovědi: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> pro bod 48,96° s. š., 16,95° v. d., živě při každém otevření. Srážky jsou v milimetrech (1 mm = 1 litr vody na m²). Časy východu a západu slunce jsou vypočtené pro polohu obce, bez vlivu terénu. Kdyby se živá data nenačetla, zobrazí se poslední uložená předpověď.</div>
+  </footer>
+</div>
+
+<script>
+const UPDATED = "2026-10-18T09:22:34Z";
+// čas UTC | teplota | srážky mm | délka úseku h | symbol
+const RAW = `10-18T10|16.3|0|1|fair_day
+10-18T11|17.0|0|1|partlycloudy_day
+10-18T12|17.4|0|1|partlycloudy_day
+10-18T13|17.4|0|1|partlycloudy_day
+10-18T14|16.8|0|1|partlycloudy_day
+10-18T15|15.4|0|1|fair_day
+10-18T16|13.1|0|1|partlycloudy_night
+10-18T17|11.8|0|1|clearsky_night
+10-18T18|10.9|0|1|clearsky_night
+10-18T19|10.2|0|1|clearsky_night
+10-18T20|9.7|0|1|clearsky_night
+10-18T21|9.3|0|1|clearsky_night
+10-18T22|8.9|0|1|clearsky_night
+10-18T23|8.5|0|1|clearsky_night
+10-19T00|8.1|0|1|clearsky_night
+10-19T01|7.8|0|1|clearsky_night
+10-19T02|7.5|0|1|clearsky_night
+10-19T03|7.3|0|1|clearsky_night
+10-19T04|7.2|0|1|clearsky_night
+10-19T05|7.0|0|1|clearsky_day
+10-19T06|7.3|0|1|clearsky_day
+10-19T07|9.2|0|1|partlycloudy_day
+10-19T08|10.5|0|1|cloudy
+10-19T09|11.4|0|1|cloudy
+10-19T10|11.6|0|1|cloudy
+10-19T11|11.9|0|1|cloudy
+10-19T12|11.7|0|1|cloudy
+10-19T13|11.6|0|1|cloudy
+10-19T14|11.5|0|1|cloudy
+10-19T15|11.2|0|1|cloudy
+10-19T16|10.4|0|1|cloudy
+10-19T17|10.0|0|1|cloudy
+10-19T18|9.6|0|1|partlycloudy_night
+10-19T19|9.1|0|1|partlycloudy_night
+10-19T20|8.4|0|1|partlycloudy_night
+10-19T21|7.5|0|1|partlycloudy_night
+10-19T22|6.9|0|1|partlycloudy_night
+10-19T23|6.5|0|1|fair_night
+10-20T00|6.0|0|1|clearsky_night
+10-20T01|5.6|0|1|partlycloudy_night
+10-20T02|5.9|0|1|partlycloudy_night
+10-20T03|6.2|0|1|partlycloudy_night
+10-20T04|5.8|0|1|partlycloudy_night
+10-20T05|5.7|0|1|cloudy
+10-20T06|6.4|0|1|cloudy
+10-20T07|7.5|0|1|cloudy
+10-20T08|8.7|0|1|cloudy
+10-20T09|9.6|0|1|cloudy
+10-20T10|10.2|0|1|cloudy
+10-20T11|10.9|0|1|cloudy
+10-20T12|12.2|0|1|cloudy
+10-20T13|13.0|0|1|cloudy
+10-20T14|13.0|0|1|cloudy
+10-20T15|12.6|0|1|cloudy
+10-20T16|11.8|0|1|partlycloudy_night
+10-20T17|11.2|0|1|cloudy
+10-20T18|11.2|0|1|cloudy
+10-20T19|11.2|0|1|cloudy
+10-20T20|11.5|0|1|cloudy
+10-20T21|11.7|0|1|partlycloudy_night
+10-20T22|11.2|0|1|fair_night
+10-20T23|10.9|0|1|fair_night
+10-21T00|10.8|0|6|fair_night
+10-21T06|10.9|0|6|fair_day
+10-21T12|17.3|0|6|cloudy
+10-21T18|15.4|0.4|6|cloudy
+10-22T00|13.5|0|6|cloudy
+10-22T06|10.6|0|6|cloudy
+10-22T12|12.6|0|6|cloudy
+10-22T18|10.6|0.1|6|cloudy
+10-23T00|9.5|0|6|cloudy
+10-23T06|6.9|0|6|partlycloudy_day
+10-23T12|14.4|0|6|partlycloudy_day
+10-23T18|8.7|0.1|6|clearsky_night
+10-24T00|5.9|0|6|partlycloudy_night
+10-24T06|5.0|0|6|cloudy
+10-24T12|11.0|1.7|6|rain
+10-24T18|7.8|1.3|6|rain
+10-25T00|3.9|0.6|6|lightrain
+10-25T06|4.9|0.8|6|lightrain
+10-25T12|8.3|0.3|6|cloudy
+10-25T18|6.6|0.1|6|cloudy
+10-26T00|5.4|0.4|6|cloudy
+10-26T06|6.4|5.4|6|heavyrain
+10-26T12|6.6|0.2|6|cloudy
+10-26T18|7.8|0.1|6|cloudy`;
+
+const pts = RAW.trim().split("\n").map(l=>{
+  const [t,temp,pr,per,sym]=l.split("|");
+  return {d:new Date("2026-"+t+":00:00Z"), t:+temp, p:+pr, per:+per, s:sym};
+});
+
+const TZ="Europe/Prague";
+const fDay=new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,weekday:"short",day:"numeric",month:"numeric"});
+const fKey=new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"});
+const fHour=new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,hour:"2-digit",minute:"2-digit"});
+const fHr=new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,hour:"numeric"});
+const fFull=new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,day:"numeric",month:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"});
+const mm=v=>v.toLocaleString("cs-CZ",{minimumFractionDigits:1,maximumFractionDigits:1})+" mm";
+const deg=v=>Math.round(v)+" °C";
+
+const NAMES={clearsky:"Jasno",fair:"Skoro jasno",partlycloudy:"Polojasno",cloudy:"Zataženo",lightrain:"Slabý déšť",rain:"Déšť",heavyrain:"Silný déšť"};
+const base=s=>s.replace(/_(day|night)$/,"");
+const RANK={clearsky:0,fair:1,partlycloudy:2,cloudy:3,lightrain:4,rain:5,heavyrain:6};
+
+let icon=function(s){
+  const b=base(s), night=s.endsWith("_night");
+  const sun = night
+    ? '<path d="M15 5a7 7 0 1 0 7 9 5.5 5.5 0 0 1-7-9z" fill="var(--muted)"/>'
+    : '<circle cx="11" cy="10" r="5" fill="var(--temp)"/>';
+  const cloud='<path d="M8 21h13a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4 1.8A3.6 3.6 0 0 0 8 21z" fill="var(--muted)" opacity=".85"/>';
+  const drops=n=>[...Array(n)].map((_,i)=>`<line x1="${10+i*5}" y1="24" x2="${8+i*5}" y2="29" stroke="var(--rain)" stroke-width="2" stroke-linecap="round"/>`).join("");
+  let g="";
+  if(b==="clearsky") g=sun;
+  else if(b==="fair"||b==="partlycloudy") g=sun+(b==="fair"?'':cloud);
+  else if(b==="cloudy") g=cloud;
+  else g=cloud+drops(b==="lightrain"?1:b==="rain"?2:3);
+  if(b==="fair") g=sun+'<path d="M12 22h9a3 3 0 0 0 0-6 4 4 0 0 0-7.6 1.2A2.4 2.4 0 0 0 12 22z" fill="var(--muted)" opacity=".85"/>';
+  return `<svg class="ic" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">${g}</svg>`;
+};
+
+// východ a západ slunce (algoritmus NOAA, přesnost asi 1 minuta)
+const LAT=48.958, LON=16.947, RAD=Math.PI/180;
+function sunTimes(d){
+  const [y,m,dd]=fKey.format(d).split("-").map(Number);
+  const jd=Date.UTC(y,m-1,dd,12)/864e5+2440587.5;
+  const n=Math.round(jd-2451545+0.0008);
+  const js=n-LON/360;
+  const M=(357.5291+0.98560028*js)%360;
+  const C=1.9148*Math.sin(M*RAD)+0.02*Math.sin(2*M*RAD)+0.0003*Math.sin(3*M*RAD);
+  const lam=(M+C+180+102.9372)%360;
+  const jt=2451545+js+0.0053*Math.sin(M*RAD)-0.0069*Math.sin(2*lam*RAD);
+  const sd=Math.sin(lam*RAD)*Math.sin(23.4397*RAD), cd=Math.cos(Math.asin(sd));
+  const cw=(Math.sin(-0.833*RAD)-Math.sin(LAT*RAD)*sd)/(Math.cos(LAT*RAD)*cd);
+  const w=Math.acos(cw)/RAD;
+  const toD=j=>new Date((j-2440587.5)*864e5);
+  return {rise:toD(jt-w/360), set:toD(jt+w/360)};
+}
+const dayLen=s=>{const m=Math.round((s.set-s.rise)/6e4);return Math.floor(m/60)+" h "+String(m%60).padStart(2,"0")+" min";};
+const sunCells=d=>{const s=sunTimes(d);return `<td class="num sun">${fHour.format(s.rise)}</td><td class="num sun">${fHour.format(s.set)}</td><td class="num sun">${dayLen(s)}</td>`;};
+
+// živá data: Open-Meteo (bez klíče, povoluje volání z prohlížeče)
+const API="https://api.open-meteo.com/v1/forecast?latitude="+LAT+"&longitude="+LON+
+  "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m,precipitation,weather_code,is_day"+
+  "&past_days=1&forecast_days=9&timezone=GMT&timeformat=unixtime";
+function wmo(c,day){
+  const sfx=day?"_day":"_night";
+  if(c===0) return "clearsky"+sfx;
+  if(c===1) return "fair"+sfx;
+  if(c===2) return "partlycloudy"+sfx;
+  if(c===3) return "cloudy";
+  if(c===45||c===48) return "fog";
+  if([51,53,56,61,80].includes(c)) return "lightrain";
+  if([55,57,63,66,81].includes(c)) return "rain";
+  if([65,67,82].includes(c)) return "heavyrain";
+  if(c>=71&&c<=77||c===85||c===86) return "snow";
+  if(c>=95) return "thunder";
+  return "cloudy";
+}
+NAMES.fog="Mlha"; NAMES.snow="Sněžení"; NAMES.thunder="Bouřka";
+RANK.fog=3.5; RANK.snow=5.5; RANK.thunder=7;
+const iconBase=icon;
+icon=function(s){
+  const b=base(s);
+  if(b==="fog") return iconBase("cloudy");
+  if(b==="snow"||b==="thunder") return iconBase("heavyrain");
+  return iconBase(s);
+};
+
+function render(pts,cur,updated,live){
+  const now=new Date();
+  const todayKey=fKey.format(now);
+  // teď
+  document.getElementById("nowT").innerHTML=Math.round(cur.t)+"<sup>°C</sup>";
+  document.getElementById("nowC").innerHTML=icon(cur.s)+" "+NAMES[base(cur.s)];
+  document.getElementById("nowTime").textContent=(live?"Aktuálně, ":"Předpověď na ")+fHour.format(cur.d)+", "+fDay.format(cur.d);
+  document.getElementById("upd").textContent=(live?"Živá data, načtena ":"Uložená data (živá se nepodařilo načíst) z ")+fFull.format(updated)+". Stránka se obnovuje každých 15 minut.";
+
+  // denní souhrn od dnešní půlnoci
+  const days=new Map();
+  for(const p of pts){
+    const k=fKey.format(p.d);
+    if(k<todayKey) continue;
+    if(!days.has(k)) days.set(k,{d:p.d,mx:-99,mn:99,p:0,s:"clearsky_day",n:0});
+    const o=days.get(k);
+    o.mx=Math.max(o.mx,p.t); o.mn=Math.min(o.mn,p.t); o.p+=p.p; o.n+=p.per;
+    const sb=base(p.s);
+    if(!p.s.endsWith("_night") && RANK[sb]>=RANK[base(o.s)]) o.s=sb+(sb.match(/^(clearsky|fair|partlycloudy)$/)?"_day":"");
+  }
+  const list=[...days.values()].filter(o=>o.n>=12);
+  const maxP=Math.max(...list.map(o=>o.p),1);
+  document.getElementById("days").innerHTML=list.map(o=>{
+    const isT=fKey.format(o.d)===todayKey;
+    const w=o.p>0?Math.max(3,Math.round(o.p/maxP*60)):0;
+    const pr=o.p>=0.05?`${mm(o.p)}<span class="bar" style="width:${w}px"></span>`:`<span class="dry">bez srážek</span>`;
+    return `<tr class="${isT?"today":""}"><td>${isT?"Dnes":fDay.format(o.d)}</td><td>${icon(o.s)}${NAMES[base(o.s)]}</td><td class="num mx">${deg(o.mx)}</td><td class="num mn">${deg(o.mn)}</td><td class="num">${pr}</td>${sunCells(o.d)}</tr>`;
+  }).join("");
+
+  const tObj=days.get(todayKey)||list[0];
+  document.getElementById("sToday").textContent=deg(tObj.mx)+" / "+deg(tObj.mn);
+  const in24=pts.filter(p=>p.d>now-3600e3 && p.d<new Date(+now+24*3600e3)).reduce((s,p)=>s+p.p,0);
+  document.getElementById("s24").textContent=mm(in24);
+  {const s=sunTimes(now);document.getElementById("sSun").textContent=fHour.format(s.rise)+" / "+fHour.format(s.set);document.getElementById("sLen").textContent="Délka dne "+dayLen(s);}
+  document.getElementById("sAllLab").textContent="Srážky za "+list.length+" dní celkem";
+  document.getElementById("sAll").textContent=mm(list.reduce((s,o)=>s+o.p,0));
+
+  // graf 72 h od aktuální hodiny
+  const H=pts.filter(p=>p.per===1 && p.d>now-3600e3).slice(0,72);
+  if(H.length<2) return;
+  const svg=document.getElementById("chart");
+  const W=820,Ht=260,L=40,R=40,T=14,B=34,pw=W-L-R,ph=Ht-T-B;
+  const tmin=Math.floor(Math.min(...H.map(p=>p.t))/5)*5, tmax=Math.max(tmin+5,Math.ceil(Math.max(...H.map(p=>p.t))/5)*5);
+  const pmax=Math.max(2,Math.ceil(Math.max(...H.map(p=>p.p))));
+  const x=i=>L+i*(pw/(H.length-1));
+  const y=v=>T+ph-(v-tmin)/(tmax-tmin)*ph;
+  const yp=v=>T+ph-v/pmax*ph;
+  let g="";
+  for(let v=tmin;v<=tmax;v+=5){g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${v}°</text>`;}
+  const pstep=Math.max(1,Math.ceil(pmax/2));
+  for(let v=0;v<=pmax;v+=pstep){g+=`<text x="${W-R+8}" y="${yp(v)+4}" style="fill:var(--rain)">${v}</text>`;}
+  H.forEach((p,i)=>{
+    const h=fHr.format(p.d);
+    if(h==="0"){g+=`<line x1="${x(i)}" x2="${x(i)}" y1="${T}" y2="${T+ph}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${x(i)+4}" y="${Ht-6}" style="fill:var(--fg)">${fDay.format(p.d)}</text>`;}
+    if(+h%6===0){g+=`<text x="${x(i)}" y="${T+ph+14}" text-anchor="middle">${h}h</text>`;}
+    if(p.p>0){const bw=pw/H.length*.7;g+=`<rect x="${x(i)-bw/2}" y="${yp(p.p)}" width="${bw}" height="${T+ph-yp(p.p)}" fill="var(--rain)" opacity=".8"/>`;}
+  });
+  const line=H.map((p,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(p.t).toFixed(1)}`).join("");
+  g+=`<path d="${line} L${x(H.length-1)},${T+ph} L${x(0)},${T+ph}Z" fill="var(--temp)" opacity=".1"/>`;
+  g+=`<path d="${line}" fill="none" stroke="var(--temp)" stroke-width="2.2" stroke-linejoin="round"/>`;
+  const iMx=H.reduce((a,p,i)=>p.t>H[a].t?i:a,0), iMn=H.reduce((a,p,i)=>p.t<H[a].t?i:a,0);
+  for(const i of [iMx,iMn]){g+=`<circle cx="${x(i)}" cy="${y(H[i].t)}" r="3.5" fill="var(--temp)"/><text x="${x(i)}" y="${y(H[i].t)+(i===iMx?-8:16)}" text-anchor="middle" style="fill:var(--temp)">${H[i].t.toFixed(1).replace(".",",")}°</text>`;}
+  if(H.every(p=>p.p===0)) g+=`<text x="${L+pw/2}" y="${T+ph-8}" text-anchor="middle" style="fill:var(--rain)">V příštích 72 h se srážky nečekají</text>`;
+  svg.innerHTML=g;
+}
+
+async function loadWeather(){
+  try{
+    const r=await fetch(API,{cache:"no-store"});
+    if(!r.ok) throw new Error(r.status);
+    const j=await r.json();
+    const h=j.hourly;
+    const live=h.time.map((t,i)=>({d:new Date(t*1000),t:h.temperature_2m[i],p:h.precipitation[i]||0,per:1,s:wmo(h.weather_code[i],h.is_day[i])}))
+      .filter(p=>p.t!=null);
+    const c=j.current;
+    render(live,{d:new Date(c.time*1000),t:c.temperature_2m,s:wmo(c.weather_code,c.is_day)},new Date(),true);
+  }catch(e){
+    const now=new Date();
+    const cur=pts.reduce((a,b)=>Math.abs(b.d-now)<Math.abs(a.d-now)?b:a);
+    render(pts,cur,new Date(UPDATED),false);
+  }
+}
+loadWeather();
+setInterval(loadWeather,15*60e3);
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+(function(){
+  if(!window.L){document.getElementById("rTime").textContent="Mapu se nepodařilo načíst, zkontrolujte připojení";return;}
+  const BASE="https://opendata.chmi.cz/meteorology/weather/radar/composite/maxz/png_masked/pacz2gmaps3.z_max3d.";
+  const BOUNDS=[[48.047,11.267],[52.167,20.770]];
+  const HOME=[48.958,16.947];
+  const dark=matchMedia("(prefers-color-scheme: dark)").matches;
+  const map=L.map("rmap",{zoomControl:true,attributionControl:false}).setView(HOME,8);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/"+(dark?"dark_all":"light_all")+"/{z}/{x}/{y}{r}.png",{maxZoom:12,subdomains:"abcd"}).addTo(map);
+  L.circleMarker(HOME,{radius:6,color:"#d0582a",weight:3,fillOpacity:0}).addTo(map).bindTooltip("Terezín",{permanent:true,direction:"right",offset:[8,0]});
+  const p=n=>String(n).padStart(2,"0");
+  const stamp=d=>d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+"."+p(d.getUTCHours())+p(d.getUTCMinutes());
+  const url=d=>BASE+stamp(d)+".0.png";
+  const fT=new Intl.DateTimeFormat("cs-CZ",{timeZone:"Europe/Prague",hour:"2-digit",minute:"2-digit"});
+  const probe=u=>new Promise(r=>{const i=new Image();i.onload=()=>r(true);i.onerror=()=>r(false);i.src=u;});
+  let frames=[],layers=[],idx=11,timer=null;
+  const slide=document.getElementById("rSlide"),play=document.getElementById("rPlay"),lab=document.getElementById("rTime");
+  function show(i){
+    idx=i;slide.value=i;
+    layers.forEach((l,k)=>l.setOpacity(k===i?0.75:0));
+    lab.textContent="Snímek "+fT.format(frames[i])+(i===frames.length-1?" · nejnovější":"");
+  }
+  async function load(){
+    const t=new Date();t.setUTCSeconds(0,0);t.setUTCMinutes(Math.floor(t.getUTCMinutes()/5)*5);
+    let latest=null;
+    for(let k=0;k<12;k++){const d=new Date(+t-k*300e3);if(await probe(url(d))){latest=d;break;}}
+    if(!latest){lab.textContent="Radarová data ČHMÚ teď nejsou dostupná";return;}
+    layers.forEach(l=>map.removeLayer(l));
+    frames=[...Array(12)].map((_,k)=>new Date(+latest-(11-k)*300e3));
+    layers=frames.map(d=>L.imageOverlay(url(d),BOUNDS,{opacity:0,className:"radar-img"}).addTo(map));
+    show(frames.length-1);
+  }
+  slide.addEventListener("input",e=>{stop();show(+e.target.value);});
+  function stop(){clearInterval(timer);timer=null;play.textContent="▶ Přehrát";}
+  play.addEventListener("click",()=>{
+    if(timer){stop();return;}
+    play.textContent="❚❚ Pauza";
+    timer=setInterval(()=>show((idx+1)%frames.length),600);
+  });
+  load();
+  setInterval(()=>{if(!timer)load();},5*60e3);
+})();
+</script>
+</body>
+</html>

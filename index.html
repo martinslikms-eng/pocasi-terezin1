@@ -51,6 +51,8 @@ h2{font-family:var(--f-display);font-weight:500;font-size:20px;margin:0}
 .dtop{display:flex;justify-content:space-between;align-items:center;gap:6px}
 .dtop .eyebrow{font-size:13px;color:#111;font-weight:600}
 .dtop .ic{margin:0}
+.dtop .eyebrow{white-space:nowrap}
+.mini{width:66px;height:47px;flex:0 0 auto;margin:-6px -6px -6px 0;display:block}
 .dcond{font-size:13px;color:#333;min-height:1.5em}
 .dtemp{display:flex;align-items:baseline;gap:10px}
 .dmax{font-family:var(--f-display);font-weight:700;font-size:40px;line-height:1;color:#111;font-variant-numeric:tabular-nums}
@@ -441,13 +443,14 @@ function render(pts,cur,updated,live){
     const sn=sunTimes(o.d);
     const prc=o.p>=0.05?`<b>${mm(o.p)}</b><span class="dbar"><i style="width:${Math.max(6,Math.round(o.p/maxP*100))}%"></i></span>`:`<b class="dry">bez srážek</b><span class="dbar"></span>`;
     return `<article class="dcard${isT?" today":""}" data-i="${list.indexOf(o)}" tabindex="0" role="button" aria-label="Podrobnosti: ${isT?"Dnes":fDay.format(o.d)}">
-      <div class="dtop"><span class="eyebrow">${isT?"Dnes":fDay.format(o.d)}</span>${icon(o.s).replace('width="26" height="26"','width="40" height="40"')}</div>
+      <div class="dtop"><span class="eyebrow">${isT?"Dnes":fDay.format(o.d)}</span><canvas class="mini" data-s="${o.s}" role="img" aria-label="${NAMES[base(o.s)]}"></canvas></div>
       <div class="dcond">${NAMES[base(o.s)]}</div>
       <div class="dtemp"><span class="dmax">${Math.round(o.mx)}<sup>°</sup></span><span class="dmin">${Math.round(o.mn)}°</span></div>
       <div class="drain">${prc}</div>
       <div class="dsun"><span>↑ ${fHour.format(sn.rise)}</span><span>↓ ${fHour.format(sn.set)}</span><span>${dayLen(sn)}</span></div>
     </article>`;
   }).join("");
+  setTimeout(()=>{try{Mini.attach();}catch(e){}},0);
 
   const tObj=days.get(todayKey)||list[0];
   document.getElementById("sToday").textContent=deg(tObj.mx)+" / "+deg(tObj.mn);
@@ -686,6 +689,82 @@ const Scene=(()=>{
   };
 })();
 function setScene(s){try{Scene.set(s);}catch(e){}}
+// malé animace v rohu dlaždic po dnech (průhledné pozadí, barvy dlaždice zůstávají)
+const Mini=(()=>{
+  let items=[],raf=0,last=0;
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const R=(a,b)=>a+Math.random()*(b-a);
+  const W=76,H=54;
+  function sprite(w,h,tone,dark){
+    const c=document.createElement("canvas");c.width=w*2;c.height=h*2;const g=c.getContext("2d");g.scale(2,2);
+    const n=Math.round(w*h/40);
+    for(let i=0;i<n;i++){
+      const x=R(w*.14,w*.86), y=h*.66-Math.sin((x/w)*Math.PI)*h*R(.15,.4)+R(-h*.05,h*.1);
+      const r=R(h*.14,h*.3)*(1-Math.abs(x/w-.5)*.9); if(r<2) continue;
+      const base=Math.round(tone-(y/h)*dark*110), top=Math.min(255,base+40);
+      const gr=g.createRadialGradient(x-r*.25,y-r*.35,r*.1,x,y,r);
+      gr.addColorStop(0,`rgba(${top},${top},${Math.min(255,top+8)},.85)`);
+      gr.addColorStop(.65,`rgba(${base},${base},${base+10},.5)`);
+      gr.addColorStop(1,`rgba(${base},${base},${base+10},0)`);
+      g.fillStyle=gr;g.beginPath();g.arc(x,y,r,0,7);g.fill();
+    }
+    return c;
+  }
+  function make(cv){
+    const sym=cv.dataset.s, b=base(sym);
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    cv.width=W*dpr;cv.height=H*dpr;const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
+    const wet=["lightrain","rain","heavyrain","thunder"].includes(b), over=b==="cloudy"||wet||b==="snow"||b==="fog";
+    const it={cv,ctx,b,t:R(0,10),sun:["clearsky","fair","partlycloudy"].includes(b),clouds:[],drops:[],flakes:[],fog:[],flash:0};
+    const nC={clearsky:0,fair:1,partlycloudy:2,cloudy:3,fog:2,lightrain:2,rain:3,heavyrain:3,thunder:3,snow:2}[b]??0;
+    const tone=over?(wet?190:212):238, dark=over?1:.7;
+    for(let i=0;i<nC;i++){const w=R(42,60)*(over?1:.85),h=w*.55;
+      it.clouds.push({img:sprite(Math.round(w),Math.round(h),tone,dark),x:it.sun?R(4,36):R(-10,36),y:it.sun?R(14,24):R(-2,12)+i*4,w,h,v:R(3,7),dir:1,ox:0});}
+    if(wet){const n=b==="lightrain"?10:b==="rain"?18:28;for(let i=0;i<n;i++)it.drops.push({x:R(10,66),y:R(30,H),v:R(70,110),l:R(5,9)});}
+    if(b==="snow")for(let i=0;i<16;i++)it.flakes.push({x:R(8,68),y:R(28,H),v:R(10,20),p:R(0,6),r:R(1.2,2.4)});
+    if(b==="fog")for(let i=0;i<3;i++)it.fog.push({y:24+i*10,p:R(0,6)});
+    return it;
+  }
+  function draw(it,dt){
+    const {ctx}=it;it.t+=dt;ctx.clearRect(0,0,W,H);
+    if(it.sun){
+      const x=it.b==="clearsky"?W/2:W*.62, y=it.b==="clearsky"?H/2:H*.38, k=1+Math.sin(it.t*1.2)*.05;
+      const g=ctx.createRadialGradient(x,y,0,x,y,26*k);
+      g.addColorStop(0,"rgba(255,236,150,.9)");g.addColorStop(.45,"rgba(255,200,60,.35)");g.addColorStop(1,"rgba(255,200,60,0)");
+      ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+      ctx.save();ctx.translate(x,y);ctx.rotate(it.t*.4);ctx.strokeStyle="rgba(255,176,0,.75)";ctx.lineWidth=2;ctx.lineCap="round";
+      for(let i=0;i<10;i++){ctx.rotate(Math.PI/5);ctx.beginPath();ctx.moveTo(13,0);ctx.lineTo(17+Math.sin(it.t*2+i)*2,0);ctx.stroke();}
+      ctx.restore();
+      const c=ctx.createRadialGradient(x-3,y-3,1,x,y,10);c.addColorStop(0,"#fff7c9");c.addColorStop(.5,"#ffd23f");c.addColorStop(1,"#ffaa00");
+      ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,10,0,7);ctx.fill();
+    }
+    for(const cl of it.clouds){cl.ox=Math.sin(it.t*.35*cl.v/5)*6;ctx.drawImage(cl.img,cl.x+cl.ox,cl.y,cl.w,cl.h);}
+    if(it.fog.length)for(const f of it.fog){const x=Math.sin(it.t*.6+f.p)*8;ctx.fillStyle="rgba(120,140,160,.35)";ctx.beginPath();ctx.roundRect?ctx.roundRect(8+x,f.y,60,5,3):ctx.rect(8+x,f.y,60,5);ctx.fill();}
+    ctx.lineCap="round";
+    for(const d of it.drops){d.y+=d.v*dt;d.x-=d.v*.15*dt;if(d.y>H){d.y=R(26,32);d.x=R(14,68);}
+      ctx.strokeStyle="rgba(8,100,210,.75)";ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x+d.l*.18,d.y-d.l);ctx.stroke();}
+    for(const f of it.flakes){f.y+=f.v*dt;f.p+=dt*2;if(f.y>H){f.y=R(26,30);f.x=R(10,66);}
+      ctx.fillStyle="#fff";ctx.strokeStyle="rgba(70,110,150,.6)";ctx.lineWidth=.6;ctx.beginPath();ctx.arc(f.x+Math.sin(f.p)*2,f.y,f.r,0,7);ctx.fill();ctx.stroke();}
+    if(it.b==="thunder"){
+      if(it.flash<=0&&Math.random()<dt*.4)it.flash=.5;
+      if(it.flash>0){ctx.fillStyle=`rgba(255,200,0,${Math.min(1,it.flash*2)})`;ctx.beginPath();
+        [[40,26],[33,40],[39,40],[34,53],[47,36],[41,36],[46,26]].forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.fill();it.flash-=dt;}
+    }
+  }
+  function loop(ts){
+    const dt=Math.min(.05,(ts-(last||ts))/1000);last=ts;
+    items=items.filter(i=>i.cv.isConnected);
+    for(const it of items)draw(it,dt);
+    if(items.length&&!reduce&&!document.hidden) raf=requestAnimationFrame(loop);
+  }
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){cancelAnimationFrame(raf);last=0;raf=requestAnimationFrame(loop);}});
+  return {attach(){
+    items=[...document.querySelectorAll("canvas.mini")].map(make);
+    cancelAnimationFrame(raf);last=0;
+    if(reduce){for(const it of items)draw(it,0);}else raf=requestAnimationFrame(loop);
+  }};
+})();
+
 
 async function loadWeather(){
   try{

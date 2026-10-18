@@ -79,6 +79,8 @@ tr.today td{background:color-mix(in srgb, var(--rain-soft) 35%, transparent)}
 .rctl input{flex:1 1 160px;accent-color:var(--rain)}
 .rscale{height:28px;max-width:100%;border-radius:4px}
 .leaflet-container{background:var(--surface)!important;font-family:var(--f-body)}
+.basemap{filter:saturate(.6) contrast(.95)}
+@media (prefers-color-scheme: dark){.basemap{filter:invert(1) hue-rotate(180deg) brightness(.9) saturate(.4)}}
 .radar-img{image-rendering:pixelated}
 .note a{color:var(--rain)}
 footer{font-size:13px;color:var(--muted);display:grid;gap:4px;max-width:65ch}
@@ -122,7 +124,7 @@ footer a{color:var(--rain)}
       <input id="rSlide" type="range" min="0" max="11" value="11" aria-label="Čas snímku">
       <img src="https://opendata.chmi.cz/meteorology/weather/radar/scl/scl-dbzmmh.png" alt="Barevná stupnice intenzity srážek" class="rscale">
     </div>
-    <p class="note">Maximální odrazivost z radarové sítě ČHMÚ, zobrazena jen tam, kde srážky dopadají na zem. Nový snímek každých 5 minut, animace ukazuje poslední hodinu. Křížek označuje Terezín. Data: <a href="https://opendata.chmi.cz/meteorology/weather/radar/" target="_blank" rel="noopener">opendata.chmi.cz</a>, podkladová mapa © OpenStreetMap, © CARTO.</p>
+    <p class="note">Maximální odrazivost z radarové sítě ČHMÚ, zobrazena jen tam, kde srážky dopadají na zem. Nový snímek každých 5 minut, animace ukazuje poslední hodinu. Křížek označuje Terezín. Data: <a href="https://opendata.chmi.cz/meteorology/weather/radar/" target="_blank" rel="noopener">opendata.chmi.cz</a>, podkladová mapa © OpenStreetMap.</p>
   </section>
 
   <section>
@@ -405,8 +407,8 @@ setInterval(loadWeather,15*60e3);
   const BOUNDS=[[48.047,11.267],[52.167,20.770]];
   const HOME=[48.958,16.947];
   const dark=matchMedia("(prefers-color-scheme: dark)").matches;
-  const map=L.map("rmap",{zoomControl:true,attributionControl:false}).setView(HOME,8);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/"+(dark?"dark_all":"light_all")+"/{z}/{x}/{y}{r}.png",{maxZoom:12,subdomains:"abcd"}).addTo(map);
+  const map=L.map("rmap",{zoomControl:true,attributionControl:true}).setView(HOME,8);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:12,className:"basemap",attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(map);
   L.circleMarker(HOME,{radius:6,color:"#d0582a",weight:3,fillOpacity:0}).addTo(map).bindTooltip("Terezín",{permanent:true,direction:"right",offset:[8,0]});
   const p=n=>String(n).padStart(2,"0");
   const stamp=d=>d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+"."+p(d.getUTCHours())+p(d.getUTCMinutes());

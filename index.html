@@ -42,6 +42,25 @@ h2{font-family:var(--f-display);font-weight:500;font-size:20px;margin:0}
 .sky .chartbox,.sky .tbl{border-color:var(--line);background:var(--surface)}
 .sky tr.today td{background:rgba(255,255,255,.16)}
 .sky td,.sky .mx{font-weight:500}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+@media (max-width:420px){.dgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.dcard{display:grid;gap:6px;padding:14px;border-radius:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);min-width:0}
+.dcard.today{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.55)}
+.dtop{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.dtop .eyebrow{font-size:13px;color:#fff;font-weight:500}
+.dtop .ic{margin:0}
+.dcond{font-size:13px;color:rgba(255,255,255,.85);min-height:1.5em}
+.dtemp{display:flex;align-items:baseline;gap:10px}
+.dmax{font-family:var(--f-display);font-weight:700;font-size:40px;line-height:1;color:#fff;font-variant-numeric:tabular-nums}
+.dmax sup{font-size:.45em;vertical-align:.8em}
+.dmin{font-family:var(--f-display);font-weight:500;font-size:20px;color:rgba(255,255,255,.7)}
+.drain{display:grid;gap:4px}
+.drain b{font-family:var(--f-mono);font-weight:500;font-size:14px;color:#cdeaff}
+.drain b.dry{color:rgba(255,255,255,.65);font-family:var(--f-body)}
+.dbar{display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}
+.dbar i{display:block;height:100%;background:#cdeaff;border-radius:3px}
+.dsun{display:flex;flex-wrap:wrap;gap:4px 10px;font-family:var(--f-mono);font-size:11px;color:rgba(255,255,255,.75);padding-top:6px;border-top:1px solid rgba(255,255,255,.18)}
+@media (max-width:420px){.dmax{font-size:34px}.dcard{padding:12px}}
 .hero .big{color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.18)}
 .hero .cond{color:#fff}
 .now{display:flex;flex-wrap:wrap;gap:24px 40px;align-items:flex-end}
@@ -144,10 +163,7 @@ footer a{color:var(--rain)}
 
   <section class="sky">
     <h2>Předpověď po dnech</h2>
-    <div class="tbl"><table>
-      <thead><tr><th>Den</th><th>Počasí</th><th class="num">Max</th><th class="num">Min</th><th class="num">Srážky</th><th class="num">Východ</th><th class="num">Západ</th><th class="num">Délka dne</th></tr></thead>
-      <tbody id="days"></tbody>
-    </table></div>
+    <div class="dgrid" id="days"></div>
   </section>
 
   <footer>
@@ -354,7 +370,15 @@ function render(pts,cur,updated,live){
     const isT=fKey.format(o.d)===todayKey;
     const w=o.p>0?Math.max(3,Math.round(o.p/maxP*60)):0;
     const pr=o.p>=0.05?`${mm(o.p)}<span class="bar" style="width:${w}px"></span>`:`<span class="dry">bez srážek</span>`;
-    return `<tr class="${isT?"today":""}"><td>${isT?"Dnes":fDay.format(o.d)}</td><td>${icon(o.s)}${NAMES[base(o.s)]}</td><td class="num mx">${deg(o.mx)}</td><td class="num mn">${deg(o.mn)}</td><td class="num">${pr}</td>${sunCells(o.d)}</tr>`;
+    const sn=sunTimes(o.d);
+    const prc=o.p>=0.05?`<b>${mm(o.p)}</b><span class="dbar"><i style="width:${Math.max(6,Math.round(o.p/maxP*100))}%"></i></span>`:`<b class="dry">bez srážek</b><span class="dbar"></span>`;
+    return `<article class="dcard${isT?" today":""}">
+      <div class="dtop"><span class="eyebrow">${isT?"Dnes":fDay.format(o.d)}</span>${icon(o.s).replace('width="26" height="26"','width="40" height="40"')}</div>
+      <div class="dcond">${NAMES[base(o.s)]}</div>
+      <div class="dtemp"><span class="dmax">${Math.round(o.mx)}<sup>°</sup></span><span class="dmin">${Math.round(o.mn)}°</span></div>
+      <div class="drain">${prc}</div>
+      <div class="dsun"><span>↑ ${fHour.format(sn.rise)}</span><span>↓ ${fHour.format(sn.set)}</span><span>${dayLen(sn)}</span></div>
+    </article>`;
   }).join("");
 
   const tObj=days.get(todayKey)||list[0];

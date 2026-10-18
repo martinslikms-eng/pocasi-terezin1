@@ -34,7 +34,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);fon
 .eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,6vw,40px);line-height:1.1;margin:4px 0 0;text-wrap:balance}
 h2{font-family:var(--f-display);font-weight:500;font-size:20px;margin:0}
-.hero{--fg:#fff;--muted:rgba(255,255,255,.82);color:#fff;display:grid;gap:22px;padding:22px 20px 24px;border-radius:16px;
+.hero{--fg:#111;--muted:#222;color:#111;display:grid;gap:22px;padding:22px 20px 24px;border-radius:16px;
   background:linear-gradient(135deg,var(--sky1),var(--sky2));box-shadow:0 10px 30px -14px var(--sky1)}
 .sky{--fg:#fff;--muted:rgba(255,255,255,.82);--line:rgba(255,255,255,.22);--grid:rgba(255,255,255,.16);
   --surface:rgba(255,255,255,.08);--temp:#ffd166;--rain:#bfe6ff;--rain-soft:rgba(255,255,255,.35);
@@ -111,8 +111,9 @@ button.rrow:hover,button.rrow:focus-visible{background:#f0f8ff;outline:none}
 .hslot .hp{font-family:var(--f-mono);font-size:11px;color:#0877e3}
 .hslot .hp.none{color:#999}
 @media (prefers-reduced-motion: reduce){.dcard,.ddlg,.ddcard{transition:none}.dcard:hover{transform:none}}
-.hero .big{color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.18)}
-.hero .cond{color:#fff}
+.hero .big{color:#111;text-shadow:none}
+.hero .eyebrow{color:#111;font-weight:600}
+.hero .cond{color:#111}
 .now{display:flex;flex-wrap:wrap;gap:24px 40px;align-items:flex-end}
 .big{font-family:var(--f-display);font-weight:700;font-size:clamp(64px,16vw,104px);line-height:.9;color:var(--temp);font-variant-numeric:tabular-nums}
 .big sup{font-size:.4em;vertical-align:.9em;margin-left:2px}

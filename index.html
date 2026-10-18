@@ -184,6 +184,7 @@ tr.today td{background:color-mix(in srgb, var(--rain-soft) 55%, transparent)}
 @media (prefers-color-scheme: dark){.basemap{filter:invert(1) hue-rotate(180deg) brightness(.95) saturate(.9)}}
 .radar-img{image-rendering:pixelated}
 .note a{color:var(--rain)}
+.credit{font-size:11px;opacity:.7}
 footer{font-size:13px;color:var(--muted);display:grid;gap:4px;max-width:65ch}
 footer a{color:var(--rain)}
 </style>
@@ -248,7 +249,7 @@ footer a{color:var(--rain)}
 
   <footer>
     <div id="upd">–</div>
-    <div>Zdroj předpovědi: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> pro bod 48,96° s. š., 16,95° v. d., živě při každém otevření. Srážky jsou v milimetrech (1 mm = 1 litr vody na m²). Časy východu a západu slunce jsou vypočtené pro polohu obce, bez vlivu terénu. Kdyby se živá data nenačetla, zobrazí se poslední uložená předpověď.</div>
+    <div class="credit">Data: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo.com</a> · <a href="https://opendata.chmi.cz" target="_blank" rel="noopener">ČHMÚ</a></div>
   </footer>
 </div>
 

@@ -52,6 +52,8 @@ h2{font-family:var(--f-display);font-weight:500;font-size:20px;margin:0}
 .dtop .eyebrow{font-size:13px;color:#111;font-weight:600}
 .dtop .ic{margin:0}
 .dtop .eyebrow{white-space:nowrap}
+.mini.mh{width:54px;height:38px;margin:0}
+.mini.mbig{width:120px;height:85px;margin:-10px 0 -10px 0}
 .mini{width:66px;height:47px;flex:0 0 auto;margin:-6px -6px -6px 0;display:block}
 .dcond{font-size:13px;color:#333;min-height:1.5em}
 .dtemp{display:flex;align-items:baseline;gap:10px}
@@ -506,10 +508,10 @@ function openDay(i){
       slots.push({d:p.d,t:p.t,s:p.s,p:rain});
     }
   }
-  const hours=slots.map(x=>`<div class="hslot"><span class="hh">${fHour.format(x.d)}</span>${icon(x.s).replace('width="26" height="26"','width="32" height="32"')}<b>${Math.round(x.t)}°</b><span class="hp${x.p>=0.05?"":" none"}">${x.p>=0.05?mm(x.p):"–"}</span></div>`).join("");
+  const hours=slots.map(x=>`<div class="hslot"><span class="hh">${fHour.format(x.d)}</span><canvas class="mini mh" data-s="${x.s}"></canvas><b>${Math.round(x.t)}°</b><span class="hp${x.p>=0.05?"":" none"}">${x.p>=0.05?mm(x.p):"–"}</span></div>`).join("");
   document.getElementById("ddBody").innerHTML=`
     <div class="ddhead"><div><div class="eyebrow">${isT?"Dnes, ":""}${new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,weekday:"long",day:"numeric",month:"long"}).format(o.d)}</div>
-      <div class="ddcond">${NAMES[base(o.s)]}</div></div>${icon(o.s).replace('width="26" height="26"','width="72" height="72"')}</div>
+      <div class="ddcond">${NAMES[base(o.s)]}</div></div><canvas class="mini mbig" data-s="${o.s}"></canvas></div>
     <div class="ddtemp"><span class="ddmax">${Math.round(o.mx)}<sup>°C</sup></span><span class="ddmin">min ${Math.round(o.mn)} °C</span></div>
     <div class="ddfacts">
       <div><span>Srážky za den</span><b>${o.p>=0.05?mm(o.p):"bez srážek"}</b></div>
@@ -522,6 +524,7 @@ function openDay(i){
   showModal();
 }
 function showModal(){
+  setTimeout(()=>{try{Mini.attach();}catch(e){}},0);
   dlg.hidden=false;
   document.body.style.overflow="hidden";
   requestAnimationFrame(()=>dlg.classList.add("open"));
@@ -546,7 +549,7 @@ function openStat(k){
     const mx=Math.max(...H.map(p=>p.p),0.1);
     html=`<div class="ddhead"><div><div class="eyebrow">Příštích 24 hodin</div><div class="ddcond">Srážky po hodinách</div></div></div>
       <div class="ddtemp"><span class="ddmax">${tot.toLocaleString("cs-CZ",{minimumFractionDigits:1,maximumFractionDigits:1})}<sup>mm</sup></span><span class="ddmin">${tot<0.05?"bez srážek":"celkem"}</span></div>
-      <div class="hours">${H.map(p=>`<div class="hslot"><span class="hh">${fHour.format(p.d)}</span>${icon(p.s).replace('width="26" height="26"','width="32" height="32"')}<b>${Math.round(p.t)}°</b><span class="hbar"><i style="height:${Math.round(p.p/mx*100)}%"></i></span><span class="hp${p.p>=0.05?"":" none"}">${p.p>=0.05?mm(p.p):"–"}</span></div>`).join("")}</div>`;
+      <div class="hours">${H.map(p=>`<div class="hslot"><span class="hh">${fHour.format(p.d)}</span><canvas class="mini mh" data-s="${p.s}"></canvas><b>${Math.round(p.t)}°</b><span class="hbar"><i style="height:${Math.round(p.p/mx*100)}%"></i></span><span class="hp${p.p>=0.05?"":" none"}">${p.p>=0.05?mm(p.p):"–"}</span></div>`).join("")}</div>`;
   }else if(k==="rainall"){
     const mx=Math.max(...DAYLIST.map(o=>o.p),0.1);
     const tot=DAYLIST.reduce((a,o)=>a+o.p,0);
@@ -715,7 +718,7 @@ const Mini=(()=>{
     const dpr=Math.min(2,window.devicePixelRatio||1);
     cv.width=W*dpr;cv.height=H*dpr;const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
     const wet=["lightrain","rain","heavyrain","thunder"].includes(b), over=b==="cloudy"||wet||b==="snow"||b==="fog";
-    const it={cv,ctx,b,t:R(0,10),sun:["clearsky","fair","partlycloudy"].includes(b),clouds:[],drops:[],flakes:[],fog:[],flash:0};
+    const it={cv,ctx,b,night:sym.endsWith("_night"),t:R(0,10),sun:["clearsky","fair","partlycloudy"].includes(b),clouds:[],drops:[],flakes:[],fog:[],flash:0};
     const nC={clearsky:0,fair:1,partlycloudy:2,cloudy:3,fog:2,lightrain:2,rain:3,heavyrain:3,thunder:3,snow:2}[b]??0;
     const tone=over?(wet?190:212):238, dark=over?1:.7;
     for(let i=0;i<nC;i++){const w=R(42,60)*(over?1:.85),h=w*.55;
@@ -727,7 +730,14 @@ const Mini=(()=>{
   }
   function draw(it,dt){
     const {ctx}=it;it.t+=dt;ctx.clearRect(0,0,W,H);
-    if(it.sun){
+    if(it.sun&&it.night){
+      const x=it.b==="clearsky"?W/2:W*.62, y=it.b==="clearsky"?H/2:H*.38;
+      const g=ctx.createRadialGradient(x,y,0,x,y,22);g.addColorStop(0,`rgba(255,246,200,${.45+Math.sin(it.t)*.08})`);g.addColorStop(1,"rgba(255,246,200,0)");
+      ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+      ctx.fillStyle="#fbf0c4";ctx.beginPath();ctx.arc(x,y,10,0,7);ctx.fill();
+      ctx.globalCompositeOperation="destination-out";ctx.beginPath();ctx.arc(x+5,y-4,9,0,7);ctx.fill();ctx.globalCompositeOperation="source-over";
+      ctx.fillStyle="#fff";for(let i=0;i<3;i++){ctx.globalAlpha=.4+.6*Math.abs(Math.sin(it.t*1.5+i*2));ctx.beginPath();ctx.arc([14,62,22][i],[12,14,40][i],1.2,0,7);ctx.fill();}ctx.globalAlpha=1;
+    } else if(it.sun){
       const x=it.b==="clearsky"?W/2:W*.62, y=it.b==="clearsky"?H/2:H*.38, k=1+Math.sin(it.t*1.2)*.05;
       const g=ctx.createRadialGradient(x,y,0,x,y,26*k);
       g.addColorStop(0,"rgba(255,236,150,.9)");g.addColorStop(.45,"rgba(255,200,60,.35)");g.addColorStop(1,"rgba(255,200,60,0)");

@@ -34,7 +34,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);fon
 .eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,6vw,40px);line-height:1.1;margin:4px 0 0;text-wrap:balance}
 h2{font-family:var(--f-display);font-weight:500;font-size:20px;margin:0}
-.hero{--fg:#fff;--muted:rgba(255,255,255,.82);color:#fff;display:grid;gap:22px;padding:22px 20px 24px;border-radius:16px;
+.hero{position:relative;overflow:hidden;isolation:isolate;--fg:#fff;--muted:rgba(255,255,255,.82);color:#fff;display:grid;gap:22px;padding:22px 20px 24px;border-radius:16px;
   background:linear-gradient(135deg,var(--sky1),var(--sky2));box-shadow:0 10px 30px -14px var(--sky1)}
 .sky{--fg:#fff;--muted:rgba(255,255,255,.82);--line:rgba(255,255,255,.22);--grid:rgba(255,255,255,.16);
   --surface:rgba(255,255,255,.08);--temp:#ffd166;--rain:#bfe6ff;--rain-soft:rgba(255,255,255,.35);
@@ -111,6 +111,33 @@ button.rrow:hover,button.rrow:focus-visible{background:#f0f8ff;outline:none}
 .hslot .hp{font-family:var(--f-mono);font-size:11px;color:#0877e3}
 .hslot .hp.none{color:#999}
 @media (prefers-reduced-motion: reduce){.dcard,.ddlg,.ddcard{transition:none}.dcard:hover{transform:none}}
+
+/* animovaná scéna v hlavičce podle aktuálního počasí */
+.hero>*:not(.wx){position:relative;z-index:1}
+.wx{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;transition:background .6s}
+.hero.night{background:linear-gradient(135deg,#0b2a5c,#123f6e)}
+.hero.grey{background:linear-gradient(135deg,#4f6f93,#5d8fa6)}
+.wx .sunx{position:absolute;top:-30px;right:-30px;width:190px;height:190px}
+.wx .sunx .core{position:absolute;inset:55px;border-radius:50%;background:radial-gradient(circle,#fff6c2 0%,#ffd54a 55%,#ffb300 100%);box-shadow:0 0 50px 18px rgba(255,213,74,.55);animation:pulse 4s ease-in-out infinite}
+.wx .sunx .rays{position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(rgba(255,230,120,.55) 0 6deg,transparent 6deg 24deg);
+  -webkit-mask:radial-gradient(circle,transparent 38%,#000 40%,#000 62%,transparent 70%);mask:radial-gradient(circle,transparent 38%,#000 40%,#000 62%,transparent 70%);animation:spin 28s linear infinite}
+.wx .moonx{position:absolute;top:22px;right:34px;width:64px;height:64px;border-radius:50%;box-shadow:-14px 10px 0 0 #fff4c9;transform:rotate(-20deg);filter:drop-shadow(0 0 14px rgba(255,244,201,.6))}
+.wx .star{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;animation:twinkle 3s ease-in-out infinite}
+.wx .cloud{position:absolute;left:0;opacity:.9;animation:drift linear infinite;will-change:transform}
+.wx .cloud svg{display:block;width:100%;height:auto}
+.wx .drop{position:absolute;top:-20px;width:2px;height:16px;border-radius:2px;background:linear-gradient(transparent,rgba(220,240,255,.9));animation:fall linear infinite}
+.wx .flake{position:absolute;top:-10px;width:6px;height:6px;border-radius:50%;background:#fff;opacity:.9;animation:snow linear infinite}
+.wx .fog{position:absolute;left:-30%;width:160%;height:26px;border-radius:20px;background:rgba(255,255,255,.28);filter:blur(6px);animation:fogmove ease-in-out infinite alternate}
+.wx .flash{position:absolute;inset:0;background:#fff;opacity:0;animation:flash 6s infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{transform:scale(1.06);box-shadow:0 0 70px 26px rgba(255,213,74,.6)}}
+@keyframes twinkle{50%{opacity:.25;transform:scale(.6)}}
+@keyframes drift{from{transform:translateX(var(--from))}to{transform:translateX(var(--to))}}
+@keyframes fall{to{transform:translate(-30px,320px)}}
+@keyframes snow{0%{transform:translate(0,0)}50%{transform:translate(14px,150px)}100%{transform:translate(-6px,320px)}}
+@keyframes fogmove{to{transform:translateX(18%)}}
+@keyframes flash{0%,88%,92%,100%{opacity:0}89%{opacity:.55}91%{opacity:.2}90%{opacity:.05}}
+@media (prefers-reduced-motion: reduce){.wx *{animation:none!important}}
 .hero .big{color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.18)}
 .hero .cond{color:#fff}
 .now{display:flex;flex-wrap:wrap;gap:24px 40px;align-items:flex-end}
@@ -173,7 +200,8 @@ footer a{color:var(--rain)}
 </style>
 
 <div class="wrap">
-  <div class="hero">
+  <div class="hero" id="hero">
+    <div class="wx" id="wx" aria-hidden="true"></div>
   <header>
     <div class="eyebrow">Jihomoravský kraj · okres Hodonín · PSČ 696 14</div>
     <h1>Terezín – teplota a srážky</h1>
@@ -407,6 +435,7 @@ function render(pts,cur,updated,live){
   // teď
   document.getElementById("nowT").innerHTML=Math.round(cur.t)+"<sup>°C</sup>";
   document.getElementById("nowC").innerHTML=icon(cur.s)+" "+NAMES[base(cur.s)];
+  setScene(cur.s);
   document.getElementById("nowTime").textContent=(live?"Aktuálně, ":"Předpověď na ")+fHour.format(cur.d)+", "+fDay.format(cur.d);
   document.getElementById("upd").textContent=(live?"Živá data, načtena ":"Uložená data (živá se nepodařilo načíst) z ")+fFull.format(updated)+". Stránka se obnovuje každých 15 minut.";
 
@@ -555,6 +584,35 @@ document.getElementById("ddBody").addEventListener("click",e=>{const r=e.target.
 document.getElementById("ddClose").addEventListener("click",closeDay);
 dlg.addEventListener("click",e=>{if(e.target===dlg)closeDay();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!dlg.hidden)closeDay();});
+
+// animovaná scéna podle aktuálního počasí
+function setScene(sym){
+  const wx=document.getElementById("wx"), hero=document.getElementById("hero");
+  if(!wx||!hero) return;
+  const b=base(sym), now=new Date(), st=sunTimes(now);
+  const night=sym.endsWith("_night") || now<st.rise || now>st.set;
+  const W=hero.clientWidth||600;
+  const rnd=(a,c)=>a+Math.random()*(c-a);
+  let h="";
+  const cloudSvg=(c)=>`<svg viewBox="0 0 120 60"><path d="M28 54h66a22 22 0 0 0 0-44 28 28 0 0 0-52 8A18 18 0 0 0 28 54z" fill="${c}"/></svg>`;
+  const clouds=(n,col,op)=>{for(let i=0;i<n;i++){const w=rnd(120,220),d=rnd(40,80);h+=`<div class="cloud" style="top:${rnd(-10,90)}px;width:${w}px;opacity:${op};--from:${-w-40}px;--to:${W+40}px;animation-duration:${d}s;animation-delay:${-rnd(0,d)}s">${cloudSvg(col)}</div>`;}};
+  const drops=n=>{for(let i=0;i<n;i++)h+=`<span class="drop" style="left:${rnd(0,W+40)}px;animation-duration:${rnd(.6,1.1)}s;animation-delay:${-rnd(0,1.2)}s"></span>`;};
+  if(b==="clearsky"||b==="fair"||b==="partlycloudy"){
+    h+=night?`<div class="moonx"></div>`+[...Array(18)].map(()=>`<span class="star" style="left:${rnd(0,W)}px;top:${rnd(6,160)}px;animation-delay:${-rnd(0,3)}s"></span>`).join(""):`<div class="sunx"><div class="rays"></div><div class="core"></div></div>`;
+    if(b==="fair") clouds(1,"#fff",.75);
+    if(b==="partlycloudy") clouds(3,"#fff",.8);
+  }else if(b==="cloudy"){clouds(5,night?"#c9d6e3":"#f2f6fa",.8);}
+  else if(b==="fog"){clouds(2,"#e6edf3",.6);for(let i=0;i<5;i++)h+=`<div class="fog" style="top:${20+i*40}px;animation-duration:${rnd(6,12)}s;animation-delay:${-rnd(0,6)}s"></div>`;}
+  else if(b==="snow"){clouds(3,"#e9eff5",.85);for(let i=0;i<45;i++)h+=`<span class="flake" style="left:${rnd(0,W)}px;width:${rnd(3,7)}px;height:${rnd(3,7)}px;animation-duration:${rnd(4,8)}s;animation-delay:${-rnd(0,8)}s"></span>`;}
+  else{ // déšť / bouřka
+    clouds(4,"#dbe4ee",.85);
+    drops(b==="lightrain"?35:b==="rain"?70:110);
+    if(b==="thunder") h+=`<div class="flash"></div>`;
+  }
+  hero.classList.toggle("night",night);
+  hero.classList.toggle("grey",!night && !["clearsky","fair","partlycloudy"].includes(b));
+  wx.innerHTML=h;
+}
 
 async function loadWeather(){
   try{

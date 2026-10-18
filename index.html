@@ -64,6 +64,21 @@ h2{font-family:var(--f-display);font-weight:500;font-size:20px;margin:0}
 .dcard{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
 .dcard:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 10px 22px -10px rgba(0,0,0,.45)}
 .dcard:focus-visible{outline:3px solid #ffd166;outline-offset:2px}
+ [hidden]{display:none!important}
+.stat{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+.stat:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 10px 22px -10px rgba(0,0,0,.45)}
+.stat:focus-visible{outline:3px solid #ffd166;outline-offset:2px}
+.hbar{display:flex;align-items:flex-end;width:10px;height:36px;border-radius:3px;background:#e2e8ee;overflow:hidden}
+.hbar i{display:block;width:100%;background:#0877e3}
+.rlist{display:grid;gap:6px}
+.rrow{display:grid;grid-template-columns:82px 1fr 72px;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:#f2f6fa;border:0;font:inherit;color:#111;text-align:left}
+button.rrow{cursor:pointer}
+button.rrow:hover,button.rrow:focus-visible{background:#e3eef9;outline:none}
+.rrow b{font-family:var(--f-mono);font-weight:500;text-align:right}
+.rtrack{height:8px;border-radius:4px;background:#e2e8ee;overflow:hidden}
+.rtrack i{display:block;height:100%;background:#0877e3;border-radius:4px}
+.sunrow{grid-template-columns:82px 1fr 1fr auto;font-family:var(--f-mono);font-size:13px}
+@media (prefers-reduced-motion: reduce){.stat{transition:none}.stat:hover{transform:none}}
 .ddlg{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:rgba(5,20,35,.55);backdrop-filter:blur(3px);
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));opacity:0;transition:opacity .18s ease}
 .ddlg.open{opacity:1}
@@ -166,10 +181,10 @@ footer a{color:var(--rain)}
   </div>
 
   <div class="stats">
-    <div class="stat"><span>Dnes max / min</span><b class="t" id="sToday">–</b></div>
-    <div class="stat"><span>Srážky příštích 24 h</span><b class="r" id="s24">–</b></div>
-    <div class="stat"><span id="sAllLab">Srážky celkem</span><b class="r" id="sAll">–</b></div>
-    <div class="stat"><span>Dnes východ / západ slunce</span><b class="sun" id="sSun">–</b><span id="sLen"></span></div>
+    <div class="stat" data-k="today" tabindex="0" role="button"><span>Dnes max / min</span><b class="t" id="sToday">–</b></div>
+    <div class="stat" data-k="rain24" tabindex="0" role="button"><span>Srážky příštích 24 h</span><b class="r" id="s24">–</b></div>
+    <div class="stat" data-k="rainall" tabindex="0" role="button"><span id="sAllLab">Srážky celkem</span><b class="r" id="sAll">–</b></div>
+    <div class="stat" data-k="sun" tabindex="0" role="button"><span>Dnes východ / západ slunce</span><b class="sun" id="sSun">–</b><span id="sLen"></span></div>
   </div>
 
   <section class="sky">
@@ -399,7 +414,7 @@ function render(pts,cur,updated,live){
     if(!p.s.endsWith("_night") && RANK[sb]>=RANK[base(o.s)]) o.s=sb+(sb.match(/^(clearsky|fair|partlycloudy)$/)?"_day":"");
   }
   const list=[...days.values()].filter(o=>o.n>=12);
-  DAYLIST=list;
+  DAYLIST=list; LASTPTS=pts;
   const maxP=Math.max(...list.map(o=>o.p),1);
   document.getElementById("days").innerHTML=list.map(o=>{
     const isT=fKey.format(o.d)===todayKey;
@@ -454,7 +469,7 @@ function render(pts,cur,updated,live){
 }
 
 // detail dne po kliknutí na dlaždici
-let DAYLIST=[];
+let DAYLIST=[], LASTPTS=[];
 const dlg=document.getElementById("dday");
 function openDay(i){
   const o=DAYLIST[i]; if(!o) return;
@@ -483,6 +498,9 @@ function openDay(i){
     </div>
     <div class="eyebrow">Průběh dne</div>
     <div class="hours">${hours}</div>`;
+  showModal();
+}
+function showModal(){
   dlg.hidden=false;
   document.body.style.overflow="hidden";
   requestAnimationFrame(()=>dlg.classList.add("open"));
@@ -495,6 +513,37 @@ function closeDay(){
 }
 document.getElementById("days").addEventListener("click",e=>{const c=e.target.closest(".dcard");if(c)openDay(+c.dataset.i);});
 document.getElementById("days").addEventListener("keydown",e=>{const c=e.target.closest(".dcard");if(c&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openDay(+c.dataset.i);}});
+
+const longDay=d=>new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,weekday:"long",day:"numeric",month:"long"}).format(d);
+function openStat(k){
+  const now=new Date();
+  if(k==="today"){openDay(0);return;}
+  let html="";
+  if(k==="rain24"){
+    const H=LASTPTS.filter(p=>p.d>now-3600e3 && p.d<new Date(+now+24*3600e3));
+    const tot=H.reduce((a,p)=>a+p.p,0);
+    const mx=Math.max(...H.map(p=>p.p),0.1);
+    html=`<div class="ddhead"><div><div class="eyebrow">Příštích 24 hodin</div><div class="ddcond">Srážky po hodinách</div></div></div>
+      <div class="ddtemp"><span class="ddmax">${tot.toLocaleString("cs-CZ",{minimumFractionDigits:1,maximumFractionDigits:1})}<sup>mm</sup></span><span class="ddmin">${tot<0.05?"bez srážek":"celkem"}</span></div>
+      <div class="hours">${H.map(p=>`<div class="hslot"><span class="hh">${fHour.format(p.d)}</span>${icon(p.s).replace('width="26" height="26"','width="32" height="32"')}<b>${Math.round(p.t)}°</b><span class="hbar"><i style="height:${Math.round(p.p/mx*100)}%"></i></span><span class="hp${p.p>=0.05?"":" none"}">${p.p>=0.05?mm(p.p):"–"}</span></div>`).join("")}</div>`;
+  }else if(k==="rainall"){
+    const mx=Math.max(...DAYLIST.map(o=>o.p),0.1);
+    const tot=DAYLIST.reduce((a,o)=>a+o.p,0);
+    html=`<div class="ddhead"><div><div class="eyebrow">Srážky za ${DAYLIST.length} dní</div><div class="ddcond">Kolik naprší po dnech</div></div></div>
+      <div class="ddtemp"><span class="ddmax">${tot.toLocaleString("cs-CZ",{minimumFractionDigits:1,maximumFractionDigits:1})}<sup>mm</sup></span><span class="ddmin">celkem</span></div>
+      <div class="rlist">${DAYLIST.map((o,i)=>`<button type="button" class="rrow" data-i="${i}"><span>${i===0?"Dnes":fDay.format(o.d)}</span><span class="rtrack"><i style="width:${o.p>=0.05?Math.max(3,Math.round(o.p/mx*100)):0}%"></i></span><b>${o.p>=0.05?mm(o.p):"–"}</b></button>`).join("")}</div>`;
+  }else if(k==="sun"){
+    const s0=sunTimes(now);
+    html=`<div class="ddhead"><div><div class="eyebrow">Slunce v Terezíně</div><div class="ddcond">Východ a západ</div></div></div>
+      <div class="ddtemp"><span class="ddmax" style="font-size:52px">${fHour.format(s0.rise)} – ${fHour.format(s0.set)}</span><span class="ddmin">dnes, ${dayLen(s0)}</span></div>
+      <div class="rlist">${DAYLIST.map((o,i)=>{const sn=sunTimes(o.d);return `<div class="rrow sunrow"><span>${i===0?"Dnes":fDay.format(o.d)}</span><span>↑ ${fHour.format(sn.rise)}</span><span>↓ ${fHour.format(sn.set)}</span><b>${dayLen(sn)}</b></div>`;}).join("")}</div>`;
+  }
+  document.getElementById("ddBody").innerHTML=html;
+  showModal();
+}
+document.querySelector(".stats").addEventListener("click",e=>{const c=e.target.closest(".stat");if(c)openStat(c.dataset.k);});
+document.querySelector(".stats").addEventListener("keydown",e=>{const c=e.target.closest(".stat");if(c&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openStat(c.dataset.k);}});
+document.getElementById("ddBody").addEventListener("click",e=>{const r=e.target.closest("button.rrow");if(r)openDay(+r.dataset.i);});
 document.getElementById("ddClose").addEventListener("click",closeDay);
 dlg.addEventListener("click",e=>{if(e.target===dlg)closeDay();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!dlg.hidden)closeDay();});

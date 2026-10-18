@@ -61,6 +61,36 @@ h2{font-family:var(--f-display);font-weight:500;font-size:20px;margin:0}
 .dbar i{display:block;height:100%;background:#0877e3;border-radius:3px}
 .dsun{display:flex;flex-wrap:wrap;gap:4px 10px;font-family:var(--f-mono);font-size:11px;color:#333;padding-top:6px;border-top:1px solid #e2e8ee}
 @media (max-width:420px){.dmax{font-size:34px}.dcard{padding:12px}}
+.dcard{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+.dcard:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 10px 22px -10px rgba(0,0,0,.45)}
+.dcard:focus-visible{outline:3px solid #ffd166;outline-offset:2px}
+.ddlg{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;background:rgba(5,20,35,.55);backdrop-filter:blur(3px);
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));opacity:0;transition:opacity .18s ease}
+.ddlg.open{opacity:1}
+.ddcard{--fg:#111;--muted:#5a6876;position:relative;width:min(560px,100%);max-height:100%;overflow:auto;background:#fff;color:#111;border-radius:18px;padding:22px 20px;
+  border-top:8px solid var(--sky1);box-shadow:0 24px 60px -20px rgba(0,0,0,.6);transform:scale(.92);transition:transform .18s ease;display:grid;gap:16px}
+.ddlg.open .ddcard{transform:scale(1)}
+.ddx{position:absolute;top:10px;right:10px;width:38px;height:38px;border-radius:50%;border:0;background:#eef3f8;color:#111;font-size:16px;cursor:pointer}
+.ddx:focus-visible{outline:3px solid var(--sky1)}
+.ddhead{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-right:40px}
+.ddhead .eyebrow{color:#111;font-weight:600;font-size:13px}
+.ddcond{font-family:var(--f-display);font-size:22px;font-weight:500}
+.ddtemp{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.ddmax{font-family:var(--f-display);font-weight:700;font-size:72px;line-height:.9;font-variant-numeric:tabular-nums}
+.ddmax sup{font-size:.35em;vertical-align:1.1em}
+.ddmin{font-size:18px;color:#555}
+.ddfacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ddfacts div{background:#f2f6fa;border-radius:10px;padding:10px 12px;display:grid;gap:2px}
+.ddfacts span{font-size:12px;color:#555}
+.ddfacts b{font-family:var(--f-mono);font-weight:500;font-size:16px}
+.hours{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}
+.hslot{flex:0 0 auto;min-width:64px;display:grid;justify-items:center;gap:4px;padding:10px 6px;border-radius:10px;background:#f2f6fa;font-variant-numeric:tabular-nums}
+.hslot .hh{font-family:var(--f-mono);font-size:12px;color:#555}
+.hslot .ic{margin:0}
+.hslot b{font-family:var(--f-display);font-size:18px}
+.hslot .hp{font-family:var(--f-mono);font-size:11px;color:#0877e3}
+.hslot .hp.none{color:#999}
+@media (prefers-reduced-motion: reduce){.dcard,.ddlg,.ddcard{transition:none}.dcard:hover{transform:none}}
 .hero .big{color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.18)}
 .hero .cond{color:#fff}
 .now{display:flex;flex-wrap:wrap;gap:24px 40px;align-items:flex-end}
@@ -165,6 +195,10 @@ footer a{color:var(--rain)}
     <h2>Předpověď po dnech</h2>
     <div class="dgrid" id="days"></div>
   </section>
+
+  <div class="ddlg" id="dday" hidden role="dialog" aria-modal="true" aria-label="Podrobná předpověď dne">
+    <div class="ddcard"><button class="ddx" id="ddClose" type="button" aria-label="Zavřít">✕</button><div id="ddBody"></div></div>
+  </div>
 
   <footer>
     <div id="upd">–</div>
@@ -358,13 +392,14 @@ function render(pts,cur,updated,live){
   for(const p of pts){
     const k=fKey.format(p.d);
     if(k<todayKey) continue;
-    if(!days.has(k)) days.set(k,{d:p.d,mx:-99,mn:99,p:0,s:"clearsky_day",n:0});
+    if(!days.has(k)) days.set(k,{d:p.d,mx:-99,mn:99,p:0,s:"clearsky_day",n:0,h:[]});
     const o=days.get(k);
-    o.mx=Math.max(o.mx,p.t); o.mn=Math.min(o.mn,p.t); o.p+=p.p; o.n+=p.per;
+    o.mx=Math.max(o.mx,p.t); o.mn=Math.min(o.mn,p.t); o.p+=p.p; o.n+=p.per; o.h.push(p);
     const sb=base(p.s);
     if(!p.s.endsWith("_night") && RANK[sb]>=RANK[base(o.s)]) o.s=sb+(sb.match(/^(clearsky|fair|partlycloudy)$/)?"_day":"");
   }
   const list=[...days.values()].filter(o=>o.n>=12);
+  DAYLIST=list;
   const maxP=Math.max(...list.map(o=>o.p),1);
   document.getElementById("days").innerHTML=list.map(o=>{
     const isT=fKey.format(o.d)===todayKey;
@@ -372,7 +407,7 @@ function render(pts,cur,updated,live){
     const pr=o.p>=0.05?`${mm(o.p)}<span class="bar" style="width:${w}px"></span>`:`<span class="dry">bez srážek</span>`;
     const sn=sunTimes(o.d);
     const prc=o.p>=0.05?`<b>${mm(o.p)}</b><span class="dbar"><i style="width:${Math.max(6,Math.round(o.p/maxP*100))}%"></i></span>`:`<b class="dry">bez srážek</b><span class="dbar"></span>`;
-    return `<article class="dcard${isT?" today":""}">
+    return `<article class="dcard${isT?" today":""}" data-i="${list.indexOf(o)}" tabindex="0" role="button" aria-label="Podrobnosti: ${isT?"Dnes":fDay.format(o.d)}">
       <div class="dtop"><span class="eyebrow">${isT?"Dnes":fDay.format(o.d)}</span>${icon(o.s).replace('width="26" height="26"','width="40" height="40"')}</div>
       <div class="dcond">${NAMES[base(o.s)]}</div>
       <div class="dtemp"><span class="dmax">${Math.round(o.mx)}<sup>°</sup></span><span class="dmin">${Math.round(o.mn)}°</span></div>
@@ -417,6 +452,52 @@ function render(pts,cur,updated,live){
   if(H.every(p=>p.p===0)) g+=`<text x="${L+pw/2}" y="${T+ph-8}" text-anchor="middle" style="fill:var(--rain)">V příštích 72 h se srážky nečekají</text>`;
   svg.innerHTML=g;
 }
+
+// detail dne po kliknutí na dlaždici
+let DAYLIST=[];
+const dlg=document.getElementById("dday");
+function openDay(i){
+  const o=DAYLIST[i]; if(!o) return;
+  const isT=fKey.format(o.d)===fKey.format(new Date());
+  const sn=sunTimes(o.d);
+  // po 3 hodinách (nebo po 6 h, kde model dává jen 6h úseky)
+  const slots=[];
+  for(const p of o.h){
+    const hr=+fHr.format(p.d);
+    if(p.per>1 || hr%3===0){
+      const span=p.per>1?p.per:3;
+      const rain=o.h.filter(q=>q.d>=p.d && q.d<new Date(+p.d+span*3600e3)).reduce((a,q)=>a+q.p,0);
+      slots.push({d:p.d,t:p.t,s:p.s,p:rain});
+    }
+  }
+  const hours=slots.map(x=>`<div class="hslot"><span class="hh">${fHour.format(x.d)}</span>${icon(x.s).replace('width="26" height="26"','width="32" height="32"')}<b>${Math.round(x.t)}°</b><span class="hp${x.p>=0.05?"":" none"}">${x.p>=0.05?mm(x.p):"–"}</span></div>`).join("");
+  document.getElementById("ddBody").innerHTML=`
+    <div class="ddhead"><div><div class="eyebrow">${isT?"Dnes, ":""}${new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,weekday:"long",day:"numeric",month:"long"}).format(o.d)}</div>
+      <div class="ddcond">${NAMES[base(o.s)]}</div></div>${icon(o.s).replace('width="26" height="26"','width="72" height="72"')}</div>
+    <div class="ddtemp"><span class="ddmax">${Math.round(o.mx)}<sup>°C</sup></span><span class="ddmin">min ${Math.round(o.mn)} °C</span></div>
+    <div class="ddfacts">
+      <div><span>Srážky za den</span><b>${o.p>=0.05?mm(o.p):"bez srážek"}</b></div>
+      <div><span>Východ slunce</span><b>${fHour.format(sn.rise)}</b></div>
+      <div><span>Západ slunce</span><b>${fHour.format(sn.set)}</b></div>
+      <div><span>Délka dne</span><b>${dayLen(sn)}</b></div>
+    </div>
+    <div class="eyebrow">Průběh dne</div>
+    <div class="hours">${hours}</div>`;
+  dlg.hidden=false;
+  document.body.style.overflow="hidden";
+  requestAnimationFrame(()=>dlg.classList.add("open"));
+  document.getElementById("ddClose").focus();
+}
+function closeDay(){
+  dlg.classList.remove("open");
+  document.body.style.overflow="";
+  setTimeout(()=>{dlg.hidden=true;},180);
+}
+document.getElementById("days").addEventListener("click",e=>{const c=e.target.closest(".dcard");if(c)openDay(+c.dataset.i);});
+document.getElementById("days").addEventListener("keydown",e=>{const c=e.target.closest(".dcard");if(c&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openDay(+c.dataset.i);}});
+document.getElementById("ddClose").addEventListener("click",closeDay);
+dlg.addEventListener("click",e=>{if(e.target===dlg)closeDay();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!dlg.hidden)closeDay();});
 
 async function loadWeather(){
   try{

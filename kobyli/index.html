@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
 <body>
-<title>Počasí Kobylí 691 10</title>
+<title>Silnice Kobylí</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -139,6 +139,29 @@ button.rrow:hover,button.rrow:focus-visible{background:#f0f8ff;outline:none}
 .wrow .wt{white-space:nowrap}
 .wrow .chip{font-family:var(--f-body)}
 .wrow .wt{font-family:var(--f-mono);font-weight:600}
+.road{display:flex;gap:16px;align-items:center;padding:18px;border-radius:16px;color:#111;box-shadow:0 10px 30px -14px rgba(0,0,0,.4)}
+.road.lv0{background:#c9f2d6}.road.lv1{background:#ffe3a3}.road.lv2{background:#ffc2b3}
+.rlev{font-family:var(--f-display);font-weight:700;font-size:34px;line-height:1;padding:14px 16px;border-radius:12px;background:#fff;min-width:120px;text-align:center}
+.road.lv0 .rlev{color:#137a3a}.road.lv1 .rlev{color:#9a5b00}.road.lv2 .rlev{color:#b3200a}
+.rtxt{min-width:0}.rwhen{font-size:13px;font-weight:600;opacity:.75}
+.rtxt ul,.ddverd ul{margin:6px 0 0;padding-left:18px;display:grid;gap:3px;font-size:15px}
+@media (max-width:480px){.road{flex-direction:column;align-items:stretch}.rlev{font-size:30px}}
+.day24 .hslot{border-top:5px solid transparent}
+.hslot.lv0{border-top-color:#2fb35f}.hslot.lv1{border-top-color:#f0a400}.hslot.lv2{border-top-color:#e2401c}
+.hsf{font-family:var(--f-mono);font-size:10px;color:#555}
+.wlist{display:grid;gap:8px}
+.wrow2{display:grid;grid-template-columns:78px 54px 70px 84px 1fr;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;border:0;border-left:7px solid #ccc;
+  background:linear-gradient(135deg,#d9ecff,#d6f5f9);color:#111;font:inherit;text-align:left;cursor:pointer;min-width:0}
+.wrow2:hover,.wrow2:focus-visible{background:#f0f8ff;outline:none}
+.wrow2 .wd{font-weight:600;font-size:14px}
+.wrow2 .wtemp{font-family:var(--f-mono);font-size:14px;white-space:nowrap}
+.wrow2 .wwhy{font-size:13px;color:#222;min-width:0}
+.badge{display:inline-block;font-weight:700;font-size:12px;letter-spacing:.04em;padding:4px 8px;border-radius:6px;text-align:center;color:#fff}
+.lv0 .badge{background:#2fb35f}.lv1 .badge{background:#e09400}.lv2 .badge{background:#d8381a}
+.wrow2.lv0{border-left-color:#2fb35f}.wrow2.lv1{border-left-color:#f0a400}.wrow2.lv2{border-left-color:#e2401c}
+.wrow2 .wd{white-space:nowrap}
+@media (max-width:520px){.wrow2{grid-template-columns:72px 44px 1fr auto}.wrow2 .wwhy{grid-column:1/-1}}
+.ddverd{background:#fff;color:#111;border-radius:12px;padding:12px 14px}
 .hero .big{color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.18)}
 .hero .cond{color:#fff}
 .now{display:flex;flex-wrap:wrap;gap:24px 40px;align-items:flex-end}
@@ -206,7 +229,7 @@ footer a{color:var(--rain)}
     <div class="wx" id="wx" aria-hidden="true"></div>
   <header>
     <div class="eyebrow">Jihomoravský kraj · okres Břeclav · PSČ 691 10</div>
-    <h1>Kobylí – déšť, sníh a mráz</h1>
+    <h1>Kobylí – stav silnic</h1>
   </header>
 
   <div class="now">
@@ -218,26 +241,21 @@ footer a{color:var(--rain)}
   </div>
   </div>
 
-  <div class="stats">
-    <div class="stat" data-k="today" tabindex="0" role="button"><span>Dnes max / min</span><b id="sToday">–</b></div>
-    <div class="stat" data-k="week" tabindex="0" role="button"><span>Mráz v týdnu</span><b id="sFrost">–</b><span id="sFrost2"></span></div>
-    <div class="stat" data-k="week" tabindex="0" role="button"><span>Sníh v týdnu</span><b id="sSnow">–</b><span id="sRain"></span></div>
-    <div class="stat" data-k="week" tabindex="0" role="button"><span>Náledí v týdnu</span><b id="sIce">–</b><span id="sIce2"></span></div>
-  </div>
+  <section class="road" id="road">
+    <div class="rlev" id="rLev">–</div>
+    <div class="rtxt"><div class="rwhen">Dnes a příští noc (24 h)</div><ul id="rWhy"></ul></div>
+  </section>
 
   <section class="sky">
-    <div class="head">
-      <h2>Příštích 72 hodin</h2>
-      <div class="legend"><span><i style="background:var(--temp)"></i>Teplota °C</span><span class="lrain"><i style="background:var(--rain)"></i>Déšť mm/h</span></div>
-    </div>
-    <div class="chartbox"><svg id="chart" viewBox="0 0 820 260" role="img" aria-label="Graf teploty a srážek na 72 hodin"></svg></div>
+    <h2>Po 3 hodinách</h2>
+    <div class="hours day24" id="h24"></div>
   </section>
 
 
 
   <section class="sky">
-    <h2>Předpověď po dnech</h2>
-    <div class="dgrid" id="days"></div>
+    <h2>Týden</h2>
+    <div class="wlist" id="days"></div>
   </section>
 
   <div class="ddlg" id="dday" hidden role="dialog" aria-modal="true" aria-label="Podrobná předpověď dne">
@@ -246,7 +264,7 @@ footer a{color:var(--rain)}
 
   <footer>
     <div id="upd">–</div>
-    <div class="credit">Data: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo.com</a> · <a href="https://opendata.chmi.cz" target="_blank" rel="noopener">ČHMÚ</a></div>
+    <div class="credit">Data: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo.com</a></div>
   </footer>
 </div>
 
@@ -396,7 +414,7 @@ const sunCells=d=>{const s=sunTimes(d);return `<td class="num sun">${fHour.forma
 
 // živá data: Open-Meteo (bez klíče, povoluje volání z prohlížeče)
 const API="https://api.open-meteo.com/v1/forecast?latitude="+LAT+"&longitude="+LON+
-  "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m,precipitation,rain,showers,snowfall,weather_code,is_day"+
+  "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m,soil_temperature_0cm,precipitation,rain,showers,snowfall,weather_code,is_day"+
   "&past_days=7&forecast_days=8&timezone=Europe%2FPrague&timeformat=unixtime";
 function wmo(c,day){
   const sfx=day?"_day":"_night";
@@ -449,60 +467,27 @@ function render(pts,cur,updated,live){
   const list=[...days.values()].filter(o=>o.n>=12);
   DAYLIST=list; LASTPTS=pts;
   const maxP=Math.max(...list.map(o=>o.p),1);
-  document.getElementById("days").innerHTML=list.map(o=>{
-    const isT=fKey.format(o.d)===todayKey;
-    const w=o.p>0?Math.max(3,Math.round(o.p/maxP*60)):0;
-    const pr=o.p>=0.05?`${mm(o.p)}<span class="bar" style="width:${w}px"></span>`:`<span class="dry">bez srážek</span>`;
-    const sn=sunTimes(o.d);
-    const prc=o.p>=0.05?`<b>${mm(o.p)}</b><span class="dbar"><i style="width:${Math.max(6,Math.round(o.p/maxP*100))}%"></i></span>`:`<b class="dry">bez srážek</b><span class="dbar"></span>`;
-    return `<article class="dcard${isT?" today":""}" data-i="${list.indexOf(o)}" tabindex="0" role="button" aria-label="Podrobnosti: ${isT?"Dnes":fDay.format(o.d)}">
-      <div class="dtop"><span class="eyebrow">${isT?"Dnes":fDay.format(o.d)}</span><canvas class="mini" data-s="${o.s}" role="img" aria-label="${NAMES[base(o.s)]}"></canvas></div>
-      <div class="dcond">${NAMES[base(o.s)]}</div>
-      <div class="dtemp"><span class="dmax">${Math.round(o.mx)}<sup>°</sup></span><span class="dmin">${Math.round(o.mn)}°</span></div>
-      ${wxChips(o)}
-    </article>`;
+  document.getElementById("days").innerHTML=list.map((o,i)=>{
+    const isT=fKey.format(o.d)===todayKey, rk=roadRisk(o.h);
+    return `<button type="button" class="wrow2 ${LV[rk.lvl].c}" data-i="${i}">
+      <span class="wd">${isT?"Dnes":fDay.format(o.d)}</span>
+      <canvas class="mini mh" data-s="${o.s}"></canvas>
+      <span class="wtemp"><b>${Math.round(o.mx)}°</b> ${Math.round(o.mn)}°</span>
+      <span class="badge">${LV[rk.lvl].t}</span>
+      <span class="wwhy">${rk.why[0]}</span>
+    </button>`;
   }).join("");
   setTimeout(()=>{try{Mini.attach();}catch(e){}},0);
 
-  const tObj=days.get(todayKey)||list[0];
-  document.getElementById("sToday").textContent=deg(tObj.mx)+" / "+deg(tObj.mn);
-  const in24=pts.filter(p=>p.d>now-3600e3 && p.d<new Date(+now+24*3600e3)).reduce((s,p)=>s+p.p,0);
-  const nF=list.filter(o=>o.mn<=0).length, nI=list.filter(o=>o.ice>0).length, sumS=list.reduce((a,o)=>a+o.sn,0), sumR=list.reduce((a,o)=>a+o.r,0);
-  document.getElementById("sFrost").textContent=nF?nF+(nF===1?" den":nF<5?" dny":" dní"):"nemrzne";
-  document.getElementById("sFrost2").textContent=nF?"nejníž "+Math.round(Math.min(...list.map(o=>o.mn)))+" °C":"";
-  document.getElementById("sSnow").textContent=sumS>=0.1?cm(sumS):"bez sněhu";
-  document.getElementById("sRain").textContent="déšť "+(sumR>=0.1?mm(sumR):"žádný");
-  document.getElementById("sIce").textContent=nI?(nI+(nI===1?" den":nI<5?" dny":" dní")):"nehrozí";
-  document.getElementById("sIce2").textContent=nI?list.filter(o=>o.ice>0).map(o=>fKey.format(o.d)===todayKey?"dnes":fDay.format(o.d)).join(", "):"";
-
-
-  // graf 72 h od aktuální hodiny
-  const H=pts.filter(p=>p.per===1 && p.d>now-3600e3).slice(0,72);
-  if(H.length<2) return;
-  const svg=document.getElementById("chart");
-  const W=820,Ht=260,L=40,R=40,T=14,B=34,pw=W-L-R,ph=Ht-T-B;
-  const tmin=Math.floor(Math.min(...H.map(p=>p.t))/5)*5, tmax=Math.max(tmin+5,Math.ceil(Math.max(...H.map(p=>p.t))/5)*5);
-  const pmax=Math.max(2,Math.ceil(Math.max(...H.map(p=>p.p))));
-  const x=i=>L+i*(pw/(H.length-1));
-  const y=v=>T+ph-(v-tmin)/(tmax-tmin)*ph;
-  const yp=v=>T+ph-v/pmax*ph;
-  let g="";
-  for(let v=tmin;v<=tmax;v+=5){g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${v}°</text>`;}
-  const pstep=Math.max(1,Math.ceil(pmax/2));
-  for(let v=0;v<=pmax;v+=pstep){g+=`<text x="${W-R+8}" y="${yp(v)+4}" style="fill:#0b3a8c;font-weight:600">${v}</text>`;}
-  H.forEach((p,i)=>{
-    const h=fHr.format(p.d);
-    if(h==="0"){g+=`<line x1="${x(i)}" x2="${x(i)}" y1="${T}" y2="${T+ph}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${x(i)+4}" y="${Ht-6}" style="fill:var(--fg)">${fDay.format(p.d)}</text>`;}
-    if(+h%6===0){g+=`<text x="${x(i)}" y="${T+ph+14}" text-anchor="middle">${h}h</text>`;}
-    if(p.p>0){const bw=pw/H.length*.7;g+=`<rect x="${x(i)-bw/2}" y="${yp(p.p)}" width="${bw}" height="${T+ph-yp(p.p)}" fill="var(--rain)" opacity=".8"/>`;}
-  });
-  const line=H.map((p,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(p.t).toFixed(1)}`).join("");
-  g+=`<path d="${line} L${x(H.length-1)},${T+ph} L${x(0)},${T+ph}Z" fill="var(--temp)" opacity=".16"/>`;
-  g+=`<path d="${line}" fill="none" stroke="var(--temp)" stroke-width="2.8" stroke-linejoin="round"/>`;
-  const iMx=H.reduce((a,p,i)=>p.t>H[a].t?i:a,0), iMn=H.reduce((a,p,i)=>p.t<H[a].t?i:a,0);
-  for(const i of [iMx,iMn]){g+=`<circle cx="${x(i)}" cy="${y(H[i].t)}" r="3.5" fill="var(--temp)"/><text x="${x(i)}" y="${y(H[i].t)+(i===iMx?-8:16)}" text-anchor="middle" style="fill:var(--temp)">${H[i].t.toFixed(1).replace(".",",")}°</text>`;}
-  if(H.every(p=>p.p===0)) g+=`<text x="${L+pw/2}" y="${T+ph-8}" text-anchor="middle" style="fill:var(--rain)">V příštích 72 h se srážky nečekají</text>`;
-  svg.innerHTML=g;
+  const H24=pts.filter(p=>p.per===1&&p.d>now-3600e3).slice(0,24);
+  const rk=roadRisk(H24);
+  const rl=document.getElementById("rLev"); rl.textContent=LV[rk.lvl].t;
+  document.getElementById("road").className="road "+LV[rk.lvl].c;
+  document.getElementById("rWhy").innerHTML=rk.why.map(w=>`<li>${w}</li>`).join("");
+  const sl=[];for(let i=0;i<H24.length;i+=3){const g=H24.slice(i,i+3);const p=g[0];
+    sl.push({d:p.d,t:Math.min(...g.map(q=>q.t)),sf:g.some(q=>q.sf!=null)?Math.min(...g.map(q=>q.sf??q.t)):null,s:p.s,r:g.reduce((a,q)=>a+(q.r||0),0),sn:g.reduce((a,q)=>a+(q.sn||0),0),lvl:roadRisk(g).lvl});}
+  document.getElementById("h24").innerHTML=sl.map(x=>`<div class="hslot ${LV[x.lvl].c}"><span class="hh">${fHour.format(x.d)}</span><canvas class="mini mh" data-s="${x.s}"></canvas><b>${Math.round(x.t)}°</b>${x.sf!=null?`<span class="hsf">povrch ${Math.round(x.sf)}°</span>`:""}<span class="hp${(x.sn>=0.1||x.r>=0.1)?"":" none"}">${x.sn>=0.1?"sníh "+cm(x.sn):x.r>=0.1?"déšť "+mm(x.r):"–"}</span></div>`).join("");
+  setTimeout(()=>{try{Mini.attach();}catch(e){}},0);
 }
 
 // detail dne po kliknutí na dlaždici
@@ -522,6 +507,30 @@ function wxChips(o){
   if(!a.length) return `<div class="chips"><span class="chip ok">Sucho, bez mrazu</span></div>`;
   return `<div class="chips">${a.map(x=>`<span class="chip ${x.k}"><b>${x.t}</b> ${x.v}</span>`).join("")}</div>`;
 }
+
+// sjízdnost: KLID / POZOR / VÝJEZD
+const FRZ=[56,57,66,67];
+function roadRisk(H){
+  let snow=0,rain=0,ice=false,frost=0,mn=99,firstFrost=null,firstSnow=null,wetFreeze=false,lastWet=-1e9;
+  H.forEach((p,i)=>{
+    const sf=p.sf??p.t, cold=Math.min(p.t,sf);
+    snow+=p.sn||0; rain+=p.r||0; mn=Math.min(mn,p.t);
+    if((p.sn||0)>=0.1&&!firstSnow) firstSnow=p.d;
+    if(cold<=0){frost+=p.per||1; if(!firstFrost) firstFrost=p.d; if(+p.d-lastWet<=12*36e5) wetFreeze=true;}
+    if(FRZ.includes(p.c)||((p.r||0)>=0.1&&cold<=1)) ice=true;
+    if((p.r||0)>=0.1) lastWet=+p.d;
+  });
+  const why=[];
+  if(ice) why.push("Náledí – déšť nebo mrholení při teplotě kolem nuly");
+  if(snow>=0.1) why.push(`Sníh ${cm(snow)}`+(firstSnow?`, začne kolem ${fHour.format(firstSnow)}`:""));
+  if(wetFreeze&&!ice) why.push("Mokrá vozovka po dešti zamrzne");
+  if(frost) why.push(`Mrzne ${Math.round(frost)} h`+(firstFrost?` od ${fHour.format(firstFrost)}`:"")+`, nejníž ${Math.round(mn)} °C`);
+  if(rain>=0.1&&!ice) why.push(`Déšť ${mm(rain)}`);
+  const lvl=(snow>=1||ice||wetFreeze)?2:(snow>=0.1||frost>0)?1:0;
+  if(!why.length) why.push("Nemrzne, bez sněhu a náledí");
+  return {lvl,why,snow,rain,ice,mn};
+}
+const LV=[{t:"KLID",c:"lv0"},{t:"POZOR",c:"lv1"},{t:"VÝJEZD",c:"lv2"}];
 
 const dlg=document.getElementById("dday");
 function openDay(i){
@@ -544,6 +553,7 @@ function openDay(i){
     <div class="ddhead"><div><div class="eyebrow">${isT?"Dnes, ":""}${new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,weekday:"long",day:"numeric",month:"long"}).format(o.d)}</div>
       <div class="ddcond">${NAMES[base(o.s)]}</div></div><canvas class="mini mbig" data-s="${o.s}"></canvas></div>
     <div class="ddtemp"><span class="ddmax">${Math.round(o.mx)}<sup>°C</sup></span><span class="ddmin">min ${Math.round(o.mn)} °C</span></div>
+    <div class="ddverd ${LV[roadRisk(o.h).lvl].c}"><span class="badge">${LV[roadRisk(o.h).lvl].t}</span><ul>${roadRisk(o.h).why.map(w=>`<li>${w}</li>`).join("")}</ul></div>
     <div class="ddfacts">
       <div><span>Déšť</span><b>${o.r>=0.1?mm(o.r):"–"}</b></div>
       <div><span>Sníh</span><b>${o.sn>=0.1?cm(o.sn):"–"}</b></div>
@@ -566,8 +576,6 @@ function closeDay(){
   document.body.style.overflow="";
   setTimeout(()=>{dlg.hidden=true;},180);
 }
-document.getElementById("days").addEventListener("click",e=>{const c=e.target.closest(".dcard");if(c)openDay(+c.dataset.i);});
-document.getElementById("days").addEventListener("keydown",e=>{const c=e.target.closest(".dcard");if(c&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openDay(+c.dataset.i);}});
 
 const longDay=d=>new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,weekday:"long",day:"numeric",month:"long"}).format(d);
 function openStat(k){
@@ -601,8 +609,7 @@ function openStat(k){
   document.getElementById("ddBody").innerHTML=html;
   showModal();
 }
-document.querySelector(".stats").addEventListener("click",e=>{const c=e.target.closest(".stat");if(c)openStat(c.dataset.k);});
-document.querySelector(".stats").addEventListener("keydown",e=>{const c=e.target.closest(".stat");if(c&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openStat(c.dataset.k);}});
+document.getElementById("days").addEventListener("click",e=>{const c=e.target.closest(".wrow2");if(c)openDay(+c.dataset.i);});
 document.getElementById("ddBody").addEventListener("click",e=>{const r=e.target.closest("button.rrow");if(r)openDay(+r.dataset.i);});
 document.getElementById("ddClose").addEventListener("click",closeDay);
 dlg.addEventListener("click",e=>{if(e.target===dlg)closeDay();});
@@ -840,7 +847,7 @@ async function loadWeather(){
     if(!r.ok) throw new Error(r.status);
     const j=await r.json();
     const h=j.hourly;
-    const live=h.time.map((t,i)=>({d:new Date(t*1000),t:h.temperature_2m[i],p:h.precipitation[i]||0,r:(h.rain[i]||0)+(h.showers[i]||0),sn:h.snowfall[i]||0,c:h.weather_code[i],per:1,s:wmo(h.weather_code[i],h.is_day[i])}))
+    const live=h.time.map((t,i)=>({d:new Date(t*1000),t:h.temperature_2m[i],p:h.precipitation[i]||0,r:(h.rain[i]||0)+(h.showers[i]||0),sn:h.snowfall[i]||0,c:h.weather_code[i],sf:h.soil_temperature_0cm?h.soil_temperature_0cm[i]:null,per:1,s:wmo(h.weather_code[i],h.is_day[i])}))
       .filter(p=>p.t!=null);
     const c=j.current;
     render(live,{d:new Date(c.time*1000),t:c.temperature_2m,s:wmo(c.weather_code,c.is_day)},new Date(),true);

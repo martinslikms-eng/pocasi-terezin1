@@ -7,7 +7,6 @@
 <body>
 <title>Počasí Kobylí 691 10</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: one column "meteorologický list" – velké číslo teploty, graf 72 h, tabulka dnů */
@@ -136,6 +135,10 @@ button.rrow:hover,button.rrow:focus-visible{background:#f0f8ff;outline:none}
 .chip.ice{background:#ffe1d6;border-color:#f39a78;color:#8a2400}
 .chip.ok{background:rgba(255,255,255,.65);color:#335}
 .hfz{font-family:var(--f-mono);font-size:10px;color:#05505e;background:#d9f6fb;border-radius:6px;padding:1px 5px}
+.wrow{grid-template-columns:72px 84px 1fr}
+.wrow .wt{white-space:nowrap}
+.wrow .chip{font-family:var(--f-body)}
+.wrow .wt{font-family:var(--f-mono);font-weight:600}
 .hero .big{color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.18)}
 .hero .cond{color:#fff}
 .now{display:flex;flex-wrap:wrap;gap:24px 40px;align-items:flex-end}
@@ -216,36 +219,21 @@ footer a{color:var(--rain)}
   </div>
 
   <div class="stats">
-    <div class="stat" data-k="today" tabindex="0" role="button"><span>Dnes max / min</span><b class="t" id="sToday">–</b></div>
-    <div class="stat" data-k="rain24" tabindex="0" role="button"><span>Srážky příštích 24 h</span><b class="r" id="s24">–</b></div>
-    <div class="stat" data-k="rainall" tabindex="0" role="button"><span id="sAllLab">Srážky celkem</span><b class="r" id="sAll">–</b></div>
-    <div class="stat" data-k="sun" tabindex="0" role="button"><span>Dnes východ / západ slunce</span><b class="sun" id="sSun">–</b><span id="sLen"></span></div>
+    <div class="stat" data-k="today" tabindex="0" role="button"><span>Dnes max / min</span><b id="sToday">–</b></div>
+    <div class="stat" data-k="week" tabindex="0" role="button"><span>Mráz v týdnu</span><b id="sFrost">–</b><span id="sFrost2"></span></div>
+    <div class="stat" data-k="week" tabindex="0" role="button"><span>Sníh v týdnu</span><b id="sSnow">–</b><span id="sRain"></span></div>
+    <div class="stat" data-k="week" tabindex="0" role="button"><span>Náledí v týdnu</span><b id="sIce">–</b><span id="sIce2"></span></div>
   </div>
 
   <section class="sky">
     <div class="head">
       <h2>Příštích 72 hodin</h2>
-      <div class="legend"><span><i style="background:var(--temp)"></i>Teplota °C</span><span class="lrain"><i style="background:var(--rain)"></i>Srážky mm/h</span></div>
+      <div class="legend"><span><i style="background:var(--temp)"></i>Teplota °C</span><span class="lrain"><i style="background:var(--rain)"></i>Déšť mm/h</span></div>
     </div>
     <div class="chartbox"><svg id="chart" viewBox="0 0 820 260" role="img" aria-label="Graf teploty a srážek na 72 hodin"></svg></div>
   </section>
 
-  <section>
-    <div class="head"><h2>Meteoradar ČHMÚ</h2><span class="eyebrow" id="rTime">načítám…</span></div>
-    <div class="radarframe"><div id="rmap"></div></div>
-    <div class="rctl">
-      <button id="rPlay" type="button" aria-label="Přehrát animaci">▶ Přehrát</button>
-      <input id="rSlide" type="range" min="0" max="11" value="11" aria-label="Čas snímku">
-      <img src="https://opendata.chmi.cz/meteorology/weather/radar/scl/scl-dbzmmh.png" alt="Barevná stupnice intenzity srážek" class="rscale">
-    </div>
-  </section>
 
-  <section class="sky" id="pastSec">
-    <div class="head"><h2>Srážky za posledních 7 dní</h2><span class="ptot" id="pastTot">–</span></div>
-    <div class="chartbox pastbox"><svg id="pastChart" viewBox="0 0 420 230" role="img" aria-label="Srážky v Kobylí za posledních 7 dní"></svg></div>
-    <p class="pnote"><b id="pastUpd">Aktualizuje se automaticky.</b></p>
-    <p class="pnote" id="pastNote">1 mm srážek = 1 litr vody na každý m². Hodnoty jsou z meteorologického modelu pro polohu obce, ne ze srážkoměru.</p>
-  </section>
 
   <section class="sky">
     <h2>Předpověď po dnech</h2>
@@ -471,9 +459,7 @@ function render(pts,cur,updated,live){
       <div class="dtop"><span class="eyebrow">${isT?"Dnes":fDay.format(o.d)}</span><canvas class="mini" data-s="${o.s}" role="img" aria-label="${NAMES[base(o.s)]}"></canvas></div>
       <div class="dcond">${NAMES[base(o.s)]}</div>
       <div class="dtemp"><span class="dmax">${Math.round(o.mx)}<sup>°</sup></span><span class="dmin">${Math.round(o.mn)}°</span></div>
-      <div class="drain">${prc}</div>
       ${wxChips(o)}
-      <div class="dsun"><span>↑ ${fHour.format(sn.rise)}</span><span>↓ ${fHour.format(sn.set)}</span><span>${dayLen(sn)}</span></div>
     </article>`;
   }).join("");
   setTimeout(()=>{try{Mini.attach();}catch(e){}},0);
@@ -481,40 +467,15 @@ function render(pts,cur,updated,live){
   const tObj=days.get(todayKey)||list[0];
   document.getElementById("sToday").textContent=deg(tObj.mx)+" / "+deg(tObj.mn);
   const in24=pts.filter(p=>p.d>now-3600e3 && p.d<new Date(+now+24*3600e3)).reduce((s,p)=>s+p.p,0);
-  document.getElementById("s24").textContent=mm(in24);
-  {const s=sunTimes(now);document.getElementById("sSun").textContent=fHour.format(s.rise)+" / "+fHour.format(s.set);document.getElementById("sLen").textContent="Délka dne "+dayLen(s);}
-  document.getElementById("sAllLab").textContent="Srážky za "+list.length+" dní celkem";
-  document.getElementById("sAll").textContent=mm(list.reduce((s,o)=>s+o.p,0));
+  const nF=list.filter(o=>o.mn<=0).length, nI=list.filter(o=>o.ice>0).length, sumS=list.reduce((a,o)=>a+o.sn,0), sumR=list.reduce((a,o)=>a+o.r,0);
+  document.getElementById("sFrost").textContent=nF?nF+(nF===1?" den":nF<5?" dny":" dní"):"nemrzne";
+  document.getElementById("sFrost2").textContent=nF?"nejníž "+Math.round(Math.min(...list.map(o=>o.mn)))+" °C":"";
+  document.getElementById("sSnow").textContent=sumS>=0.1?cm(sumS):"bez sněhu";
+  document.getElementById("sRain").textContent="déšť "+(sumR>=0.1?mm(sumR):"žádný");
+  document.getElementById("sIce").textContent=nI?(nI+(nI===1?" den":nI<5?" dny":" dní")):"nehrozí";
+  document.getElementById("sIce2").textContent=nI?list.filter(o=>o.ice>0).map(o=>fKey.format(o.d)===todayKey?"dnes":fDay.format(o.d)).join(", "):"";
 
 
-  // srážky za posledních 7 celých dní
-  (function(){
-    const sec=document.getElementById("pastSec"), svg=document.getElementById("pastChart");
-    const keys=[];for(let i=7;i>=1;i--)keys.push(fKey.format(new Date(+now-i*864e5)));
-    const sums=keys.map(k=>({k,d:null,p:0,n:0}));
-    for(const p of pts){const i=keys.indexOf(fKey.format(p.d));if(i>=0){sums[i].p+=p.p;sums[i].n++;sums[i].d=sums[i].d||p.d;}}
-    if(sums.every(x=>x.n===0)){document.getElementById("pastTot").textContent="nedostupné";svg.innerHTML=`<text x="210" y="120" text-anchor="middle" style="fill:#111;font-size:14px">Historická data se teď nepodařilo načíst.</text>`;return;}
-    const tot=sums.reduce((a,x)=>a+x.p,0);
-    const fmt=v=>v.toLocaleString("cs-CZ",{minimumFractionDigits:1,maximumFractionDigits:1});
-    document.getElementById("pastTot").textContent=fmt(tot)+" l/m²";
-    const W=420,H=230,L=8,R=8,T=34,B=44,pw=W-L-R,ph=H-T-B;
-    const mx=Math.max(2,Math.ceil(Math.max(...sums.map(x=>x.p))));
-    const bw=pw/7*.62;
-    let g=`<defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a7fe0"/><stop offset="1" stop-color="#1cc3d8"/></linearGradient></defs>`;
-    g+=`<line x1="${L}" x2="${W-R}" y1="${T+ph}" y2="${T+ph}" stroke="rgba(8,119,227,.35)"/>`;
-    sums.forEach((x,i)=>{
-      const cx=L+pw/7*(i+.5), h=x.p/mx*ph, y=T+ph-h;
-      const d=new Date(Date.parse(x.k+"T12:00:00Z"));
-      if(x.p>=0.05) g+=`<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" rx="6" fill="url(#pg)"/>`;
-      else g+=`<rect x="${cx-bw/2}" y="${T+ph-3}" width="${bw}" height="3" rx="1.5" fill="rgba(8,119,227,.3)"/>`;
-      g+=`<text x="${cx}" y="${(x.p>=0.05?y:T+ph-3)-8}" text-anchor="middle" style="fill:#111;font-size:15px;font-weight:600">${x.p>=0.05?fmt(x.p):"0"}</text>`;
-      g+=`<text x="${cx}" y="${H-20}" text-anchor="middle" style="fill:#111;font-size:13px">${fDay.format(d).replace(/\s\d+\.\s?\d*\.?$/,"")}</text>`;
-      g+=`<text x="${cx}" y="${H-5}" text-anchor="middle" style="fill:#333;font-size:11px">${new Intl.DateTimeFormat("cs-CZ",{timeZone:"UTC",day:"numeric",month:"numeric"}).format(d)}</text>`;
-    });
-    svg.innerHTML=g;
-    const od=new Date(Date.parse(keys[0]+"T12:00:00Z")), dod=new Date(Date.parse(keys[6]+"T12:00:00Z")), fd=new Intl.DateTimeFormat("cs-CZ",{timeZone:"UTC",day:"numeric",month:"numeric"});
-    document.getElementById("pastUpd").textContent=`Období ${fd.format(od)} – ${fd.format(dod)} · aktualizováno ${fHour.format(new Date())}, automaticky každých 15 minut a o půlnoci se posune o den.`;
-  })();
   // graf 72 h od aktuální hodiny
   const H=pts.filter(p=>p.per===1 && p.d>now-3600e3).slice(0,72);
   if(H.length<2) return;
@@ -588,9 +549,6 @@ function openDay(i){
       <div><span>Sníh</span><b>${o.sn>=0.1?cm(o.sn):"–"}</b></div>
       <div><span>Mráz</span><b>${o.mn<=0?(o.mx<=0?"celý den":Math.round(o.fh)+" h, min "+Math.round(o.mn)+" °C"):"nemrzne"}</b></div>
       <div><span>Náledí</span><b>${o.ice>0?"hrozí":"nehrozí"}</b></div>
-      <div><span>Východ slunce</span><b>${fHour.format(sn.rise)}</b></div>
-      <div><span>Západ slunce</span><b>${fHour.format(sn.set)}</b></div>
-      <div><span>Délka dne</span><b>${dayLen(sn)}</b></div>
     </div>
     <div class="eyebrow">Průběh dne</div>
     <div class="hours">${hours}</div>`;
@@ -615,6 +573,11 @@ const longDay=d=>new Intl.DateTimeFormat("cs-CZ",{timeZone:TZ,weekday:"long",day
 function openStat(k){
   const now=new Date();
   if(k==="today"){openDay(0);return;}
+  if(k==="week"){
+    document.getElementById("ddBody").innerHTML=`<div class="ddhead"><div><div class="eyebrow">Kobylí, příštích ${DAYLIST.length} dní</div><div class="ddcond">Déšť, sníh, mráz a náledí</div></div></div>
+      <div class="rlist">${DAYLIST.map((o,i)=>`<button type="button" class="rrow wrow" data-i="${i}"><span>${i===0?"Dnes":fDay.format(o.d)}</span><span class="wt">${Math.round(o.mx)}° / ${Math.round(o.mn)}°</span>${wxChips(o)}</button>`).join("")}</div>`;
+    showModal();return;
+  }
   let html="";
   if(k==="rain24"){
     const H=LASTPTS.filter(p=>p.d>now-3600e3 && p.d<new Date(+now+24*3600e3));
@@ -897,49 +860,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&Date.now(
 addEventListener("pageshow",e=>{if(e.persisted)reload();});
 </script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script>
-(function(){
-  if(!window.L){document.getElementById("rTime").textContent="Mapu se nepodařilo načíst, zkontrolujte připojení";return;}
-  const BASE="https://opendata.chmi.cz/meteorology/weather/radar/composite/maxz/png_masked/pacz2gmaps3.z_max3d.";
-  const BOUNDS=[[48.047,11.267],[52.167,20.770]];
-  const HOME=[48.933,16.892];
-  const dark=matchMedia("(prefers-color-scheme: dark)").matches;
-  const map=L.map("rmap",{zoomControl:true,attributionControl:true}).setView(HOME,8);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:12,className:"basemap",attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(map);
-  L.circleMarker(HOME,{radius:7,color:"#f04e1a",weight:3,fillColor:"#fff",fillOpacity:.9}).addTo(map).bindTooltip("Kobylí",{permanent:true,direction:"right",offset:[8,0]});
-  const p=n=>String(n).padStart(2,"0");
-  const stamp=d=>d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+"."+p(d.getUTCHours())+p(d.getUTCMinutes());
-  const url=d=>BASE+stamp(d)+".0.png";
-  const fT=new Intl.DateTimeFormat("cs-CZ",{timeZone:"Europe/Prague",hour:"2-digit",minute:"2-digit"});
-  const probe=u=>new Promise(r=>{const i=new Image();i.onload=()=>r(true);i.onerror=()=>r(false);i.src=u;});
-  let frames=[],layers=[],idx=11,timer=null;
-  const slide=document.getElementById("rSlide"),play=document.getElementById("rPlay"),lab=document.getElementById("rTime");
-  function show(i){
-    idx=i;slide.value=i;
-    layers.forEach((l,k)=>l.setOpacity(k===i?0.9:0));
-    lab.textContent="Snímek "+fT.format(frames[i])+(i===frames.length-1?" · nejnovější":"");
-  }
-  async function load(){
-    const t=new Date();t.setUTCSeconds(0,0);t.setUTCMinutes(Math.floor(t.getUTCMinutes()/5)*5);
-    let latest=null;
-    for(let k=0;k<12;k++){const d=new Date(+t-k*300e3);if(await probe(url(d))){latest=d;break;}}
-    if(!latest){lab.textContent="Radarová data ČHMÚ teď nejsou dostupná";return;}
-    layers.forEach(l=>map.removeLayer(l));
-    frames=[...Array(12)].map((_,k)=>new Date(+latest-(11-k)*300e3));
-    layers=frames.map(d=>L.imageOverlay(url(d),BOUNDS,{opacity:0,className:"radar-img"}).addTo(map));
-    show(frames.length-1);
-  }
-  slide.addEventListener("input",e=>{stop();show(+e.target.value);});
-  function stop(){clearInterval(timer);timer=null;play.textContent="▶ Přehrát";}
-  play.addEventListener("click",()=>{
-    if(timer){stop();return;}
-    play.textContent="❚❚ Pauza";
-    timer=setInterval(()=>show((idx+1)%frames.length),600);
-  });
-  load();
-  setInterval(()=>{if(!timer)load();},5*60e3);
-})();
-</script>
+
+
 </body>
 </html>
